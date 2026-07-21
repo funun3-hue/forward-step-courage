@@ -1,0 +1,26 @@
+{
+  "name": "向前一步 · 勇气训练",
+  "short_name": "向前一步",
+  "description": "把尊重、自然的主动交流，练成不依赖结果的习惯。",
+  "lang": "zh-CN",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#10182b",
+  "theme_color": "#10182b",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "./icons/icon-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}

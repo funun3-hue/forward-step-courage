@@ -1,0 +1,409 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#10182b" />
+    <meta name="description" content="把尊重、自然的主动交流，练成不依赖结果的习惯。" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="icon" href="./icons/icon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="./styles.css" />
+    <title>向前一步</title>
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">向前一步</p>
+          <h1 id="pageTitle">今日训练</h1>
+        </div>
+        <div class="topbar-actions">
+          <button class="icon-btn hidden" id="installButton" type="button" aria-label="安装到桌面">
+            <span aria-hidden="true">⇩</span>
+          </button>
+          <button class="level-pill" id="settingsButton" type="button" aria-label="打开设置">
+            <span id="levelName">搭讪小白</span>
+            <span aria-hidden="true">⚙</span>
+          </button>
+        </div>
+      </header>
+
+      <main>
+        <section class="view active" id="todayView" data-title="今日训练">
+          <article class="hero-card">
+            <div class="hero-glow" aria-hidden="true"></div>
+            <div class="hero-topline">
+              <span class="status-chip" id="trainingStatus">本周第 0 个训练日</span>
+              <span class="hero-points"><b id="totalPoints">0</b> 勇气值</span>
+            </div>
+            <blockquote>今天的任务不是让她喜欢你。<br />是让恐惧不再替你做决定。</blockquote>
+            <div class="today-count">
+              <span>今日实际接近</span>
+              <strong><span id="todayAttempts">0</span><small id="todayLimit"> / 5</small></strong>
+            </div>
+            <button class="primary-action" id="startButton" type="button">
+              <span aria-hidden="true">➜</span>
+              注意到一个合适机会
+            </button>
+            <p class="microcopy">先判断是否适合打扰。判断“不适合”也是正确行动。</p>
+          </article>
+
+          <section class="section-block" aria-labelledby="weekHeading">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">节奏，不是连胜</p>
+                <h2 id="weekHeading">本周训练日</h2>
+              </div>
+              <span id="weekProgressText">0 / 4 个完整训练日</span>
+            </div>
+            <div class="week-strip" id="weekStrip" aria-label="本周训练日进度"></div>
+            <div class="week-legend" aria-label="训练状态图例">
+              <span><i class="legend-complete"></i>完成5次</span>
+              <span><i class="legend-progress"></i>已行动1–4次</span>
+              <span><i class="legend-deferred"></i>顺延</span>
+              <span><i class="legend-neutral"></i>休息/未安排</span>
+            </div>
+            <div class="week-status-banner" id="weekStatusBanner"></div>
+            <button class="defer-action" id="deferButton" type="button">
+              <span aria-hidden="true">↷</span>
+              今晚无法完成，顺延一天
+            </button>
+            <div class="rest-pass" id="restPass">
+              <span class="rest-icon" aria-hidden="true">◐</span>
+              <div>
+                <strong>主动休息券尚未获得</strong>
+                <p>前六天完成 3 个间隔训练日后获得；漏一天不会清零。</p>
+              </div>
+            </div>
+          </section>
+
+          <section class="section-block reward-contract" aria-labelledby="rewardHeading">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">真实奖赏契约</p>
+                <h2 id="rewardHeading">不是“假装省下的钱”</h2>
+              </div>
+              <button class="text-button" id="editRewardButton" type="button">编辑</button>
+            </div>
+            <div class="reward-ticket">
+              <div class="ticket-stub" aria-hidden="true">✦</div>
+              <div class="ticket-main">
+                <span id="rewardState">完成本周目标后兑现</span>
+                <strong id="rewardLabel">看一场一直想看的电影</strong>
+                <p id="rewardValue">时间型奖赏 · 真实兑现</p>
+                <div class="progress-track" aria-hidden="true"><i id="rewardProgress"></i></div>
+                <button class="secondary-action hidden" id="claimRewardButton" type="button">我已兑现这份奖励</button>
+              </div>
+            </div>
+          </section>
+
+          <details class="boundary-card">
+            <summary>三条边界检查</summary>
+            <ul>
+              <li>对方没有明显赶路、通话、戴耳机或处理工作。</li>
+              <li>保持距离，不堵路、不尾随、不触碰。</li>
+              <li>冷淡、回避或拒绝出现时，一次就结束。</li>
+            </ul>
+          </details>
+        </section>
+
+        <section class="view" id="mapView" data-title="勇气地图">
+          <section class="map-intro">
+            <p class="eyebrow">不使用 GPS · 不记录他人位置</p>
+            <h2>每次行动，为内心世界点一盏灯</h2>
+            <p>这是一张象征性的成长地图。区域代表能力，而不是你在哪里遇见了谁。</p>
+          </section>
+
+          <div class="world-map-card">
+            <svg id="courageMap" viewBox="0 0 390 430" role="img" aria-labelledby="mapTitle mapDesc">
+              <title id="mapTitle">勇气旅程地图</title>
+              <desc id="mapDesc">随着勇气值增加，从起步港到自在峰依次点亮六个区域。</desc>
+              <defs>
+                <linearGradient id="seaGradient" x1="0" x2="0" y1="0" y2="1">
+                  <stop offset="0" stop-color="#17213b" />
+                  <stop offset="1" stop-color="#0d1427" />
+                </linearGradient>
+                <linearGradient id="landActive" x1="0" x2="1" y1="0" y2="1">
+                  <stop offset="0" stop-color="#f6bf7a" />
+                  <stop offset="1" stop-color="#df6d78" />
+                </linearGradient>
+                <filter id="landGlow" x="-50%" y="-50%" width="200%" height="200%">
+                  <feGaussianBlur stdDeviation="7" result="blur" />
+                  <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+                </filter>
+                <pattern id="mapDots" width="16" height="16" patternUnits="userSpaceOnUse">
+                  <circle cx="2" cy="2" r="1" fill="#ffffff" opacity=".12" />
+                </pattern>
+              </defs>
+              <rect width="390" height="430" rx="28" fill="url(#seaGradient)" />
+              <rect width="390" height="430" rx="28" fill="url(#mapDots)" />
+              <path class="route-line" d="M62 354 C90 326 102 300 130 279 S166 236 198 220 S237 184 259 151 S303 108 333 67" />
+              <g class="map-region" data-region="0" data-threshold="0">
+                <path d="M28 341 C39 323 68 320 88 337 C100 347 96 370 75 380 C51 390 17 365 28 341Z" />
+                <circle class="region-beacon" cx="61" cy="351" r="5" />
+                <text x="21" y="407">起步港</text>
+              </g>
+              <g class="map-region" data-region="1" data-threshold="12">
+                <path d="M90 260 C112 242 150 248 157 272 C164 295 133 311 105 300 C82 291 72 275 90 260Z" />
+                <circle class="region-beacon" cx="123" cy="278" r="5" />
+                <text x="92" y="326">回声林</text>
+              </g>
+              <g class="map-region" data-region="2" data-threshold="30">
+                <path d="M156 198 C174 177 210 181 222 204 C232 224 210 246 184 242 C158 239 141 218 156 198Z" />
+                <circle class="region-beacon" cx="190" cy="213" r="5" />
+                <text x="155" y="265">边界丘</text>
+              </g>
+              <g class="map-region" data-region="3" data-threshold="60">
+                <path d="M214 130 C236 108 269 115 284 138 C297 160 274 183 247 181 C221 178 198 151 214 130Z" />
+                <circle class="region-beacon" cx="251" cy="147" r="5" />
+                <text x="215" y="204">星光原</text>
+              </g>
+              <g class="map-region" data-region="4" data-threshold="100">
+                <path d="M276 70 C293 48 325 47 343 66 C358 82 344 106 321 112 C297 118 261 91 276 70Z" />
+                <circle class="region-beacon" cx="315" cy="79" r="5" />
+                <text x="274" y="133">从容城</text>
+              </g>
+              <g class="map-region peak" data-region="5" data-threshold="160">
+                <path d="M322 24 L338 4 L355 25 L348 48 L327 49 Z" />
+                <circle class="region-beacon" cx="339" cy="28" r="5" />
+                <text x="300" y="16">自在峰</text>
+              </g>
+              <g class="traveler" id="mapTraveler" transform="translate(61 351)">
+                <circle r="10" />
+                <path d="M-3 1 L0 -5 L4 2 L0 6 Z" />
+              </g>
+            </svg>
+            <div class="map-progress-copy">
+              <span id="mapRegionName">起步港已点亮</span>
+              <strong id="mapNextText">再获得 12 点，抵达回声林</strong>
+            </div>
+          </div>
+
+          <section class="section-block" aria-labelledby="titleRoadHeading">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">能力增长</p>
+                <h2 id="titleRoadHeading">称号之路</h2>
+              </div>
+              <span id="titleProgressText">0 / 12</span>
+            </div>
+            <div class="title-road" id="titleRoad"></div>
+          </section>
+
+          <section class="section-block" aria-labelledby="achievementHeading">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">特殊里程碑</p>
+                <h2 id="achievementHeading">成就徽章</h2>
+              </div>
+              <span id="achievementCount">0 / 5</span>
+            </div>
+            <div class="achievement-grid" id="achievementGrid"></div>
+          </section>
+        </section>
+
+        <section class="view" id="cardsView" data-title="勇气卡册">
+          <section class="card-album-head">
+            <div>
+              <p class="eyebrow">收藏真实的新证据</p>
+              <h2>受挫不再只代表屈辱</h2>
+            </div>
+            <span class="album-count"><b id="cardCount">0</b> 张</span>
+          </section>
+          <p class="album-help">点击卡片翻面。纹样由行动生成，稀有度取决于你跨越的焦虑，不取决于对方是否喜欢你。</p>
+          <div class="card-grid" id="cardGrid"></div>
+        </section>
+
+        <section class="view" id="reviewView" data-title="本周复盘">
+          <div class="stats-grid">
+            <article class="stat-card"><span>完整训练日</span><strong id="reviewDays">0</strong><small>目标 4 天 × 5 次</small></article>
+            <article class="stat-card"><span>实际接近</span><strong id="reviewActions">0</strong><small>白天和晚上都计入</small></article>
+            <article class="stat-card"><span>礼貌退出</span><strong id="reviewExits">0</strong><small>边界也是能力</small></article>
+          </div>
+
+          <section class="section-block" aria-labelledby="deferReasonHeading">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">天气与现实安排</p>
+                <h2 id="deferReasonHeading">本周顺延原因</h2>
+              </div>
+              <span id="deferralCount">0 次顺延</span>
+            </div>
+            <div class="reason-chart" id="deferralReasonChart"></div>
+            <div class="deferral-list" id="deferralList"></div>
+          </section>
+
+          <section class="section-block" aria-labelledby="reasonHeading">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">本机语义归类</p>
+                <h2 id="reasonHeading">本周最常见的阻碍</h2>
+              </div>
+              <span id="avoidanceCount">0 次回避</span>
+            </div>
+            <div class="reason-chart" id="reasonChart"></div>
+            <div class="if-then-plan" id="ifThenPlan">
+              <span>下次的“如果—那么”计划</span>
+              <p>记录一次回避后，这里会根据最常见阻碍生成行动计划。</p>
+            </div>
+          </section>
+
+          <section class="section-block" aria-labelledby="evidenceHeading">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">预测校准</p>
+                <h2 id="evidenceHeading">大脑收到的新证据</h2>
+              </div>
+            </div>
+            <div class="evidence-list" id="evidenceList"></div>
+          </section>
+
+          <section class="section-block" aria-labelledby="expenseHeading">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">真实账本</p>
+                <h2 id="expenseHeading">吃饭以外的本周开销</h2>
+              </div>
+              <strong id="expenseTotal">¥0.00</strong>
+            </div>
+            <form class="expense-form" id="expenseForm">
+              <label>
+                <span>金额</span>
+                <input id="expenseAmount" type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="0.00" required />
+              </label>
+              <label>
+                <span>类别</span>
+                <select id="expenseCategory">
+                  <option>交通</option>
+                  <option>娱乐</option>
+                  <option>购物</option>
+                  <option>奖赏兑现</option>
+                  <option>其他</option>
+                </select>
+              </label>
+              <label class="wide-field">
+                <span>备注（可选）</span>
+                <input id="expenseNote" maxlength="40" placeholder="不记录吃饭开销" />
+              </label>
+              <button class="secondary-action" type="submit">记一笔</button>
+            </form>
+            <div class="expense-list" id="expenseList"></div>
+          </section>
+
+          <section class="section-block" aria-labelledby="historyHeading">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">只记录行为，不记录她是谁</p>
+                <h2 id="historyHeading">本周行动记录</h2>
+              </div>
+            </div>
+            <div class="history-list" id="historyList"></div>
+          </section>
+        </section>
+      </main>
+
+      <nav class="bottom-nav" aria-label="主要导航">
+        <button class="nav-item active" type="button" data-view="todayView" data-label="今日训练">
+          <span aria-hidden="true">●</span><em>今天</em>
+        </button>
+        <button class="nav-item" type="button" data-view="mapView" data-label="勇气地图">
+          <span aria-hidden="true">◇</span><em>地图</em>
+        </button>
+        <button class="nav-item" type="button" data-view="cardsView" data-label="勇气卡册">
+          <span aria-hidden="true">▣</span><em>卡册</em>
+        </button>
+        <button class="nav-item" type="button" data-view="reviewView" data-label="本周复盘">
+          <span aria-hidden="true">⌁</span><em>复盘</em>
+        </button>
+      </nav>
+    </div>
+
+    <dialog class="sheet" id="trainingDialog">
+      <div class="sheet-handle" aria-hidden="true"></div>
+      <button class="sheet-close" id="closeTrainingButton" type="button" aria-label="关闭">×</button>
+      <div id="trainingDialogContent"></div>
+    </dialog>
+
+    <dialog class="sheet" id="settingsDialog">
+      <div class="sheet-handle" aria-hidden="true"></div>
+      <button class="sheet-close" id="closeSettingsButton" type="button" aria-label="关闭">×</button>
+      <form id="settingsForm">
+        <p class="eyebrow">训练设置</p>
+        <h2>让规则适合真实生活</h2>
+        <label>
+          <span>每周目标训练日</span>
+          <select id="weeklyTargetInput">
+            <option value="4">4 天</option>
+            <option value="3">3 天</option>
+          </select>
+        </label>
+        <label>
+          <span>每天实际接近目标</span>
+          <select id="dailyLimitInput">
+            <option value="3">3 次</option>
+            <option value="4">4 次</option>
+            <option value="5">5 次</option>
+          </select>
+        </label>
+        <label>
+          <span>当前训练阶梯</span>
+          <select id="ladderLevelInput"></select>
+        </label>
+        <div class="divider"></div>
+        <p class="eyebrow">真实奖赏契约</p>
+        <label>
+          <span>完成本周目标后，我会兑现</span>
+          <input id="rewardLabelInput" maxlength="40" required />
+        </label>
+        <label>
+          <span>实际金额（没有花钱就填 0）</span>
+          <input id="rewardAmountInput" type="number" min="0" step="1" inputmode="decimal" />
+        </label>
+        <p class="form-hint">奖赏也可以是一段真正想要的自由时间。这里不计算“本来不会花的钱”。</p>
+        <button class="primary-action" type="submit">保存设置</button>
+        <div class="data-actions">
+          <button class="text-button" id="exportButton" type="button">导出本地数据</button>
+          <button class="text-button danger" id="resetButton" type="button">清空全部数据</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog class="sheet compact-sheet" id="deferralDialog">
+      <div class="sheet-handle" aria-hidden="true"></div>
+      <button class="sheet-close" id="closeDeferralButton" type="button" aria-label="关闭">×</button>
+      <form class="dialog-step" id="deferralForm">
+        <p class="eyebrow">现实调整，不是断签</p>
+        <h2>今晚为什么需要顺延？</h2>
+        <p class="dialog-lead">今天已经完成的接近仍然保留。顺延只记录客观原因，不扣勇气值。</p>
+        <div class="reason-choice-grid">
+          <button class="reason-choice" type="button" data-deferral-reason="rain"><span aria-hidden="true">☂</span><strong>当晚有雨</strong></button>
+          <button class="reason-choice" type="button" data-deferral-reason="busy"><span aria-hidden="true">⌚</span><strong>当晚有事</strong></button>
+          <button class="reason-choice" type="button" data-deferral-reason="energy"><span aria-hidden="true">◐</span><strong>身体状态不佳</strong></button>
+          <button class="reason-choice" type="button" data-deferral-reason="setting"><span aria-hidden="true">◇</span><strong>场地或时机不合适</strong></button>
+          <button class="reason-choice wide-choice" type="button" data-deferral-reason="other"><span aria-hidden="true">＋</span><strong>其他原因</strong></button>
+        </div>
+        <label class="hidden" id="deferralOtherLabel"><span>补充原因</span><textarea id="deferralOther" maxlength="100" placeholder="只记录客观情况，不责备自己。"></textarea></label>
+        <button class="primary-action" id="saveDeferralButton" type="submit" disabled>顺延到明天</button>
+      </form>
+    </dialog>
+
+    <dialog class="sheet compact-sheet" id="installDialog">
+      <div class="sheet-handle" aria-hidden="true"></div>
+      <button class="sheet-close" id="closeInstallButton" type="button" aria-label="关闭">×</button>
+      <p class="eyebrow">安装到华为手机</p>
+      <h2>像 App 一样放到桌面</h2>
+      <ol class="install-steps">
+        <li>用华为浏览器打开部署后的 HTTPS 地址。</li>
+        <li>点击右下角“∷”，选择“添加至”→“桌面”；HarmonyOS 5 可直接选择“添加至桌面”。</li>
+        <li>以后从桌面图标打开；训练与卡片数据保存在当前浏览器本机。</li>
+      </ol>
+      <p class="form-hint">桌面图标若带蓝色小闪电，表示华为浏览器正以 PWA/快应用方式创建快捷入口，属于正常现象。</p>
+    </dialog>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script src="./app.js" defer></script>
+  </body>
+</html>
