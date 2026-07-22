@@ -181,7 +181,7 @@ summary:focus-visible {
 
 .hero-glow {
   position: absolute;
-  top: 76px;
+  top: 58px;
   right: 32px;
   width: 48px;
   height: 48px;
@@ -222,7 +222,7 @@ summary:focus-visible {
   position: relative;
   z-index: 1;
   max-width: 320px;
-  margin: 52px 0 44px;
+  margin: 70px 0 44px;
   font-family: "STKaiti", "KaiTi", serif;
   font-size: clamp(1.45rem, 6vw, 2rem);
   line-height: 1.5;
@@ -1581,7 +1581,7 @@ input[type="range"] {
   }
 
   .hero-card blockquote {
-    margin-top: 46px;
+    margin-top: 68px;
   }
 
   .level-pill span:first-child {

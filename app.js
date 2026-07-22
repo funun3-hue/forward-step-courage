@@ -619,8 +619,8 @@ function renderTrainingDialog() {
         ${trainingFlow.beyondLimit ? `<div class="if-then-plan"><span>本日 ${state.settings.dailyLimit} 次实际接近已完成</span><p>你可以自愿记录额外行动，但今天不再增加勇气值，不必继续搜寻目标。</p></div>` : ""}
         <div class="check-list">
           <label class="check-row"><input type="checkbox" data-safety-check /><span>对方没有明显赶路、通话、戴耳机或处理工作。</span></label>
-          <label class="check-row"><input type="checkbox" data-safety-check /><span>当前是公开、安全的场所；我能保持合适距离，不堵路。</span></label>
-          <label class="check-row"><input type="checkbox" data-safety-check /><span>我准备好接受任何回应；冷淡、回避或拒绝出现时，一次就结束。</span></label>
+          <label class="check-row"><input type="checkbox" data-safety-check /><span>当前是公开、安全的场所；我能保持合适距离，不过分打扰、纠缠。</span></label>
+          <label class="check-row"><input type="checkbox" data-safety-check /><span>我准备好接受任何回应；冷淡、回避或拒绝出现时，微笑着说“谢谢”然后自然离开。</span></label>
         </div>
         <div class="button-stack">
           <button class="primary-action" id="safetyPassButton" type="button" disabled>环境合适，去完成最小动作</button>
