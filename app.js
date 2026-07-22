@@ -110,7 +110,22 @@ const DEFERRAL_REASONS = {
   other: { label: "其他原因", icon: "＋" }
 };
 
-const CONTEXTS = ["商场", "街道", "咖啡店", "书店", "校园", "活动现场", "交通场所", "其他"];
+const CONTEXTS = [
+  "商场",
+  "街道",
+  "咖啡店",
+  "书店",
+  "校园",
+  "活动现场",
+  "交通场所",
+  "小区公共区域",
+  "美术馆",
+  "博物馆",
+  "公园/绿道",
+  "展览/市集",
+  "夜市/步行街",
+  "其他"
+];
 const WEEKDAY_NAMES = ["一", "二", "三", "四", "五", "六", "日"];
 
 const defaultState = {
@@ -571,6 +586,23 @@ function renderReview() {
     ? `<span>下次的“如果—那么”计划 · ${escapeHtml(REASON_GROUPS[topReasonKey].label)}</span><p>${escapeHtml(REASON_GROUPS[topReasonKey].plan)}</p>`
     : `<span>下次的“如果—那么”计划</span><p>记录一次回避后，这里会根据最常见阻碍生成行动计划。</p>`;
 
+  const contextCounts = actions.reduce((counts, log) => {
+    const context = log.context || "未记录";
+    counts[context] = (counts[context] || 0) + 1;
+    return counts;
+  }, {});
+  const sortedContexts = Object.entries(contextCounts).sort((a, b) => b[1] - a[1]);
+  const maxContext = sortedContexts[0]?.[1] || 1;
+  el("contextCount").textContent = `${actions.length} 次记录`;
+  el("contextChart").innerHTML = sortedContexts.length
+    ? sortedContexts.map(([context, count]) => `
+        <div class="reason-row">
+          <span>${escapeHtml(context)}</span>
+          <span class="reason-bar"><i style="width:${(count / maxContext) * 100}%"></i></span>
+          <strong>${count}</strong>
+        </div>`).join("")
+    : `<div class="empty-state">完成一次搭讪并保存场景后，这里会显示本周的场景分布。</div>`;
+
   const weekCards = currentWeekItems(state.cards);
   el("evidenceList").innerHTML = weekCards.length
     ? [...weekCards].reverse().slice(0, 6).map((card) => `
@@ -589,10 +621,11 @@ function renderReview() {
           : log.note
             ? escapeHtml(log.note)
             : `焦虑 ${log.anxietyBefore ?? "—"} → ${log.anxietyAfter ?? "—"}`;
+        const contextDetail = log.context && log.context !== "未记录" ? `${escapeHtml(log.context)} · ` : "";
         const fundDetail = Number(log.fundAmount) > 0 ? ` · 储备金 +${formatMoney(log.fundAmount)}` : "";
         return `<article class="history-item">
           <i aria-hidden="true">${log.kind === "avoided" ? "○" : log.kind === "unsuitable" ? "◇" : "✓"}</i>
-          <div><strong>${escapeHtml(OUTCOME_LABELS[log.kind])}</strong><small>${detail}${fundDetail}</small></div>
+          <div><strong>${escapeHtml(OUTCOME_LABELS[log.kind])}</strong><small>${contextDetail}${detail}${fundDetail}</small></div>
           <span>${escapeHtml(formatTime(log.createdAt))}</span>
         </article>`;
       }).join("")
@@ -671,8 +704,8 @@ function renderTrainingDialog() {
         ${trainingFlow.beyondLimit ? `<div class="if-then-plan"><span>本日 ${state.settings.dailyLimit} 次实际接近已完成</span><p>你可以自愿记录额外行动，但今天不再增加勇气值，不必继续搜寻目标。</p></div>` : ""}
         <div class="check-list">
           <label class="check-row"><input type="checkbox" data-safety-check /><span>对方没有明显赶路、通话、戴耳机或处理工作。</span></label>
-          <label class="check-row"><input type="checkbox" data-safety-check /><span>当前是公开、安全的场所；我能保持合适距离，不过分打扰、纠缠。</span></label>
-          <label class="check-row"><input type="checkbox" data-safety-check /><span>我准备好接受任何回应；冷淡、回避或拒绝出现时，微笑着说“谢谢”然后自然离开。</span></label>
+          <label class="check-row"><input type="checkbox" data-safety-check /><span>保持距离，对方慌乱拒绝后不过分纠缠</span></label>
+          <label class="check-row"><input type="checkbox" data-safety-check /><span>女生神情抗拒地回避或拒绝时，微笑着说谢谢并且离场。</span></label>
         </div>
         <div class="button-stack">
           <button class="primary-action" id="safetyPassButton" type="button" disabled>环境合适，去完成最小动作</button>
@@ -780,7 +813,7 @@ function renderTrainingDialog() {
           <strong>${fundAmount ? `+${formatMoney(fundAmount)}` : "今日已满 · 不再累计"}</strong>
           <small>${escapeHtml(COURAGE_FUND_LEVELS[trainingFlow.fundLevel])} · ${escapeHtml(COURAGE_FUND_GROUPS[trainingFlow.fundGroup])} · 回应不影响入账</small>
         </div>
-        <label><span>场景类别</span><select id="trainingContext">${contextOptions(trainingFlow.context)}</select></label>
+        <label><span>本次搭讪场景（写入勇气卡和周复盘）</span><select id="trainingContext">${contextOptions(trainingFlow.context)}</select></label>
         <div class="slider-row">
           <div class="slider-label"><span>行动前预计焦虑</span><strong id="beforeValue">${trainingFlow.anxietyBefore} / 10</strong></div>
           <input id="beforeRange" type="range" min="0" max="10" value="${trainingFlow.anxietyBefore}" />
