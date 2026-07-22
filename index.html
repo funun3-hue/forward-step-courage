@@ -102,11 +102,7 @@
 
           <details class="boundary-card">
             <summary>三条边界检查</summary>
-            <ul>
-              <li>对方没有明显赶路、通话、戴耳机或处理工作。</li>
-              <li>保持距离，对方慌乱拒绝后不过分纠缠</li>
-              <li>女生神情抗拒地回避或拒绝时，微笑着说谢谢并且离场。</li>
-            </ul>
+            <ul id="boundaryList"></ul>
           </details>
         </section>
 
@@ -222,6 +218,18 @@
             <article class="stat-card"><span>实际接近</span><strong id="reviewActions">0</strong><small>白天和晚上都计入</small></article>
             <article class="stat-card"><span>礼貌退出</span><strong id="reviewExits">0</strong><small>边界也是能力</small></article>
           </div>
+
+          <section class="section-block attempt-trend-section" aria-labelledby="attemptTrendHeading">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">只累计真实出手</p>
+                <h2 id="attemptTrendHeading">本周累计出手曲线</h2>
+              </div>
+              <span id="attemptTrendTotal">0 次</span>
+            </div>
+            <div class="attempt-trend-chart" id="attemptTrendChart"></div>
+            <p class="form-hint">每次真实主动交流或礼貌退出，曲线向上一级；不比较速度，不设置失败线。</p>
+          </section>
 
           <section class="section-block" aria-labelledby="deferReasonHeading">
             <div class="section-heading">

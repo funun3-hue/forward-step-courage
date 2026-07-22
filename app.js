@@ -102,6 +102,12 @@ const COURAGE_FUND_GROUPS = {
   group: "与 2 人及以上同行"
 };
 
+const BOUNDARY_CHECKS = [
+  "对方没有明显赶路、通话、戴耳机或处理工作。",
+  "保持距离，对方慌乱拒绝后不过分纠缠。",
+  "女生神情抗拒地回避或拒绝时，微笑着说谢谢并且离场。"
+];
+
 const DEFERRAL_REASONS = {
   rain: { label: "当晚有雨", icon: "☂" },
   busy: { label: "当晚有事", icon: "⌚" },
@@ -129,7 +135,7 @@ const CONTEXTS = [
 const WEEKDAY_NAMES = ["一", "二", "三", "四", "五", "六", "日"];
 
 const defaultState = {
-  version: 2,
+  version: 3,
   points: 0,
   settings: {
     weeklyTarget: 4,
@@ -168,10 +174,10 @@ function loadState() {
       rewardClaims: Array.isArray(saved.rewardClaims) ? saved.rewardClaims : []
     };
     if (Number(saved.version || 1) < 2) {
-      migrated.version = 2;
       migrated.settings.weeklyTarget = 4;
       migrated.settings.dailyLimit = 5;
     }
+    migrated.version = 3;
     return migrated;
   } catch (error) {
     console.warn("无法读取本地数据，已使用默认设置。", error);
@@ -281,6 +287,13 @@ function formatTime(value) {
   return date.toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit", hour12: false });
 }
 
+function formatLaunchLatency(value) {
+  if (value === null || value === undefined || value === "") return "未记录";
+  const milliseconds = Number(value);
+  if (!Number.isFinite(milliseconds) || milliseconds < 0) return "未记录";
+  return `${(milliseconds / 1000).toFixed(1)} 秒`;
+}
+
 function currentTitle(points = state.points) {
   return [...TITLES].reverse().find((title) => points >= title.threshold) || TITLES[0];
 }
@@ -347,6 +360,8 @@ function renderToday() {
   const dailyLimit = Number(state.settings.dailyLimit);
   const targetMet = completeDays.length >= target;
   const todayDeferral = deferrals.find((item) => item.fromDate === dateKey());
+
+  el("boundaryList").innerHTML = BOUNDARY_CHECKS.map((item) => `<li>${escapeHtml(item)}</li>`).join("");
 
   el("levelName").textContent = currentTitle().name;
   el("totalPoints").textContent = state.points;
@@ -528,6 +543,73 @@ function categorizeReason(text = "") {
   return best.key;
 }
 
+function renderAttemptTrend(actions) {
+  const chart = el("attemptTrendChart");
+  const sorted = [...actions]
+    .map((log) => ({ ...log, trendAt: new Date(log.launchedAt || log.createdAt) }))
+    .filter((log) => !Number.isNaN(log.trendAt.getTime()))
+    .sort((a, b) => a.trendAt - b.trendAt);
+
+  el("attemptTrendTotal").textContent = `${sorted.length} 次`;
+  if (!sorted.length) {
+    chart.innerHTML = `<div class="empty-state">本周还没有真实出手。完成一次主动交流或礼貌退出后，曲线会从这里向上一级。</div>`;
+    return;
+  }
+
+  const width = 390;
+  const height = 210;
+  const left = 30;
+  const right = 14;
+  const top = 20;
+  const bottom = 36;
+  const plotWidth = width - left - right;
+  const plotHeight = height - top - bottom;
+  const start = weekStart();
+  const end = new Date(start);
+  end.setDate(end.getDate() + 7);
+  const weekDuration = end - start;
+  const xFor = (date) => left + Math.min(1, Math.max(0, (date - start) / weekDuration)) * plotWidth;
+  const yFor = (count) => top + plotHeight - (count / sorted.length) * plotHeight;
+  let path = `M ${left} ${top + plotHeight}`;
+  sorted.forEach((log, index) => {
+    const x = xFor(log.trendAt);
+    path += ` H ${x.toFixed(2)} V ${yFor(index + 1).toFixed(2)}`;
+  });
+  const lastX = xFor(sorted.at(-1).trendAt);
+  const areaPath = `${path} L ${lastX.toFixed(2)} ${top + plotHeight} L ${left} ${top + plotHeight} Z`;
+  const dayLabels = getWeekDays().map((date, index) => {
+    const x = left + ((index + 0.5) / 7) * plotWidth;
+    return `<text class="attempt-axis-label" x="${x.toFixed(2)}" y="${height - 12}" text-anchor="middle">${WEEKDAY_NAMES[index]}</text>`;
+  }).join("");
+  const points = sorted.map((log, index) => {
+    const x = xFor(log.trendAt);
+    const y = yFor(index + 1);
+    return `<circle class="attempt-point" cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" r="4"><title>${escapeHtml(formatShortDate(log.trendAt))} ${escapeHtml(formatTime(log.trendAt))} · 累计 ${index + 1} 次</title></circle>`;
+  }).join("");
+
+  chart.innerHTML = `
+    <svg viewBox="0 0 ${width} ${height}" role="img" aria-label="本周累计出手 ${sorted.length} 次">
+      <defs>
+        <linearGradient id="attemptLineGradient" x1="0" x2="1" y1="0" y2="0">
+          <stop offset="0" stop-color="#75a9e8" />
+          <stop offset="1" stop-color="#77c9b5" />
+        </linearGradient>
+        <linearGradient id="attemptAreaGradient" x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0" stop-color="#77c9b5" stop-opacity="0.22" />
+          <stop offset="1" stop-color="#75a9e8" stop-opacity="0.02" />
+        </linearGradient>
+      </defs>
+      <line class="attempt-grid-line" x1="${left}" x2="${width - right}" y1="${top + plotHeight}" y2="${top + plotHeight}" />
+      <line class="attempt-grid-line" x1="${left}" x2="${width - right}" y1="${top}" y2="${top}" />
+      <text class="attempt-axis-label" x="${left - 8}" y="${top + plotHeight + 4}" text-anchor="end">0</text>
+      <text class="attempt-axis-label" x="${left - 8}" y="${top + 4}" text-anchor="end">${sorted.length}</text>
+      <path class="attempt-area" d="${areaPath}" />
+      <path class="attempt-line" d="${path}" />
+      ${points}
+      ${dayLabels}
+    </svg>`;
+}
+
 function renderReview() {
   const logs = currentWeekLogs();
   const deferrals = currentWeekDeferrals();
@@ -541,6 +623,7 @@ function renderReview() {
   el("reviewExits").textContent = exits.length;
   el("avoidanceCount").textContent = `${avoidances.length} 次回避`;
   el("deferralCount").textContent = `${deferrals.length} 次顺延`;
+  renderAttemptTrend(actions);
 
   const deferralCounts = deferrals.reduce((counts, item) => {
     counts[item.reason] = (counts[item.reason] || 0) + 1;
@@ -623,9 +706,14 @@ function renderReview() {
             : `焦虑 ${log.anxietyBefore ?? "—"} → ${log.anxietyAfter ?? "—"}`;
         const contextDetail = log.context && log.context !== "未记录" ? `${escapeHtml(log.context)} · ` : "";
         const fundDetail = Number(log.fundAmount) > 0 ? ` · 储备金 +${formatMoney(log.fundAmount)}` : "";
+        const launchDetail = actionLogs([log]).length
+          ? log.launchLatencyMs !== null && log.launchLatencyMs !== undefined && log.launchLatencyMs !== "" && Number.isFinite(Number(log.launchLatencyMs)) && Number(log.launchLatencyMs) >= 0
+            ? ` · 从发现到行动 ${formatLaunchLatency(log.launchLatencyMs)}`
+            : " · 启动时间未记录"
+          : "";
         return `<article class="history-item">
           <i aria-hidden="true">${log.kind === "avoided" ? "○" : log.kind === "unsuitable" ? "◇" : "✓"}</i>
-          <div><strong>${escapeHtml(OUTCOME_LABELS[log.kind])}</strong><small>${contextDetail}${detail}${fundDetail}</small></div>
+          <div><strong>${escapeHtml(OUTCOME_LABELS[log.kind])}</strong><small>${contextDetail}${detail}${fundDetail}${launchDetail}</small></div>
           <span>${escapeHtml(formatTime(log.createdAt))}</span>
         </article>`;
       }).join("")
@@ -676,6 +764,11 @@ function openTrainingDialog() {
   const todayActions = actionLogs(state.logs.filter((log) => dateKey(new Date(log.createdAt)) === dateKey())).length;
   trainingFlow = {
     stage: "safety",
+    safetyIndex: 0,
+    opportunityStartedAt: Date.now(),
+    opportunityStartedPerf: performance.now(),
+    launchedAt: null,
+    launchLatencyMs: null,
     outcome: null,
     anxietyBefore: 6,
     anxietyAfter: 4,
@@ -696,47 +789,109 @@ function renderTrainingDialog() {
   if (!trainingFlow) return;
 
   if (trainingFlow.stage === "safety") {
+    const safetyIndex = Math.min(BOUNDARY_CHECKS.length - 1, Number(trainingFlow.safetyIndex || 0));
+    const isLastCheck = safetyIndex === BOUNDARY_CHECKS.length - 1;
     content.innerHTML = `
-      <div class="dialog-step">
-        <p class="eyebrow">10 秒环境检查</p>
-        <h2>先确认这是一个合适机会</h2>
-        <p class="dialog-lead">不是每个心动瞬间都必须行动。能识别边界，本身就是社交能力。</p>
-        ${trainingFlow.beyondLimit ? `<div class="if-then-plan"><span>本日 ${state.settings.dailyLimit} 次实际接近已完成</span><p>你可以自愿记录额外行动，但今天不再增加勇气值，不必继续搜寻目标。</p></div>` : ""}
-        <div class="check-list">
-          <label class="check-row"><input type="checkbox" data-safety-check /><span>对方没有明显赶路、通话、戴耳机或处理工作。</span></label>
-          <label class="check-row"><input type="checkbox" data-safety-check /><span>保持距离，对方慌乱拒绝后不过分纠缠</span></label>
-          <label class="check-row"><input type="checkbox" data-safety-check /><span>女生神情抗拒地回避或拒绝时，微笑着说谢谢并且离场。</span></label>
-        </div>
-        <div class="button-stack">
-          <button class="primary-action" id="safetyPassButton" type="button" disabled>环境合适，去完成最小动作</button>
-          <button class="secondary-action" id="unsuitableButton" type="button">不适合打扰，记为判断正确</button>
+      <div class="dialog-step safety-timing-stage">
+        <div class="safety-timer-ring" aria-hidden="true"></div>
+        <div class="safety-step-content">
+          <div class="safety-progress-row">
+            <p class="eyebrow">逐条边界检查</p>
+            <strong>${safetyIndex + 1} / ${BOUNDARY_CHECKS.length}</strong>
+          </div>
+          <h2>先确认这是一个合适机会</h2>
+          <p class="dialog-lead">一次只判断一件事。能识别边界，本身就是社交能力。</p>
+          ${trainingFlow.beyondLimit ? `<div class="if-then-plan"><span>本日 ${state.settings.dailyLimit} 次实际接近已完成</span><p>你可以自愿记录额外行动，但今天不再增加勇气值，不必继续搜寻目标。</p></div>` : ""}
+          <div class="single-safety-check" aria-live="polite">
+            <span>边界 ${safetyIndex + 1}</span>
+            <p class="safety-check-copy">${escapeHtml(BOUNDARY_CHECKS[safetyIndex])}</p>
+          </div>
+          <div class="button-stack">
+            <button class="primary-action" id="safetyConfirmButton" type="button">${isLastCheck ? "确认，开始行动" : "确认，下一条"}</button>
+            <button class="secondary-action" id="safetyRejectButton" type="button">不符合，本次不打扰</button>
+          </div>
         </div>
       </div>`;
 
-    const checks = [...content.querySelectorAll("[data-safety-check]")];
-    checks.forEach((checkbox) => checkbox.addEventListener("change", () => {
-      el("safetyPassButton").disabled = !checks.every((item) => item.checked);
-    }));
-    el("safetyPassButton").addEventListener("click", () => {
+    el("safetyConfirmButton").addEventListener("click", () => {
+      if (!isLastCheck) {
+        trainingFlow.safetyIndex = safetyIndex + 1;
+        renderTrainingDialog();
+        return;
+      }
+      const wallElapsed = Date.now() - trainingFlow.opportunityStartedAt;
+      const performanceElapsed = performance.now() - trainingFlow.opportunityStartedPerf;
+      trainingFlow.launchLatencyMs = Math.max(0, Math.round(Math.max(wallElapsed, performanceElapsed)));
+      trainingFlow.launchedAt = new Date().toISOString();
       trainingFlow.stage = "action";
       renderTrainingDialog();
     });
-    el("unsuitableButton").addEventListener("click", () => saveSimpleLog("unsuitable"));
+    el("safetyRejectButton").addEventListener("click", () => saveSimpleLog("unsuitable"));
     return;
   }
 
   if (trainingFlow.stage === "action") {
     const ladder = LADDER_LEVELS[Number(state.settings.ladderLevel)] || LADDER_LEVELS[3];
-    const fundAmount = trainingFlow.beyondLimit ? 0 : courageFundAmount(trainingFlow.fundLevel, trainingFlow.fundGroup);
     content.innerHTML = `
       <div class="dialog-step">
         <p class="eyebrow">${escapeHtml(ladder.name)}</p>
         <h2>焦虑可以在场，你仍然能选择</h2>
         <div class="minimum-action"><span>今天的最小动作</span><strong>${escapeHtml(ladder.action)}</strong></div>
+        <div class="fund-action-cue">
+          <span>完成后再记录心动程度与同行人数</span>
+          <strong>${trainingFlow.beyondLimit ? "今日已满 · 仍可记录" : "¥0.05–¥10.50"}</strong>
+          <p>现在只做最小动作，不在出手前计算档位。</p>
+        </div>
+        <div class="launch-plan"><span>如果环境合适，而且我开始反复预测拒绝</span><strong>那么我先迈出一步，再允许焦虑跟上来。</strong></div>
+        <p class="dialog-lead">不用寻找完美开场。说话真实、保持距离、给对方轻松退出的空间。</p>
+        <button class="primary-action" id="returnedButton" type="button">行动完成了，回来记录</button>
+        <button class="secondary-action" id="changedUnsuitableButton" type="button">现场变得不合适</button>
+        <button class="text-button" id="actionAvoidedButton" type="button">我还是回避了</button>
+      </div>`;
+    el("returnedButton").addEventListener("click", () => {
+      trainingFlow.stage = "outcome";
+      renderTrainingDialog();
+    });
+    el("changedUnsuitableButton").addEventListener("click", () => saveSimpleLog("unsuitable"));
+    el("actionAvoidedButton").addEventListener("click", () => {
+      trainingFlow.outcome = "avoided";
+      trainingFlow.stage = "avoidance-detail";
+      renderTrainingDialog();
+    });
+    return;
+  }
+
+  if (trainingFlow.stage === "outcome") {
+    content.innerHTML = `
+      <div class="dialog-step">
+        <p class="eyebrow">不评判结果</p>
+        <h2>刚才发生了什么？</h2>
+        <div class="outcome-grid">
+          <button class="outcome-button" type="button" data-outcome="completed"><strong>完成了主动交流</strong><span>不记录是否拿到联系方式</span></button>
+          <button class="outcome-button" type="button" data-outcome="graceful_exit"><strong>对方没兴趣，我自然退出</strong><span>这是一次完整而有边界的训练</span></button>
+        </div>
+      </div>`;
+    content.querySelectorAll("[data-outcome]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const outcome = button.dataset.outcome;
+        trainingFlow.outcome = outcome;
+        trainingFlow.stage = "action-detail";
+        renderTrainingDialog();
+      });
+    });
+    return;
+  }
+
+  if (trainingFlow.stage === "action-detail") {
+    const fundAmount = trainingFlow.beyondLimit ? 0 : courageFundAmount(trainingFlow.fundLevel, trainingFlow.fundGroup);
+    content.innerHTML = `
+      <form class="dialog-step" id="actionDetailForm">
+        <p class="eyebrow">生成一张新勇气卡</p>
+        <h2>${escapeHtml(OUTCOME_LABELS[trainingFlow.outcome])}</h2>
         <div class="fund-config">
           <div class="fund-config-heading">
-            <span>给这次勇气定一个即时奖赏</span>
-            <strong id="fundPreview" aria-live="polite">${trainingFlow.beyondLimit ? "今日已满，不再累计" : `+${formatMoney(fundAmount)}`}</strong>
+            <span>事后记录本次挑战档位</span>
+            <strong id="fundPreview" aria-live="polite">${fundAmount ? `+${formatMoney(fundAmount)}` : "今日已满，不再累计"}</strong>
           </div>
           <div class="fund-config-grid">
             <label>
@@ -757,62 +912,6 @@ function renderTrainingDialog() {
           </div>
           <p>只记录你的主观挑战感和同行人数，不记录她的外貌细节；回应如何都不改变金额。</p>
         </div>
-        <div class="launch-plan"><span>如果环境合适，而且我开始反复预测拒绝</span><strong>那么我先迈出一步，再允许焦虑跟上来。</strong></div>
-        <p class="dialog-lead">不用寻找完美开场。说话真实、保持距离、给对方轻松退出的空间。</p>
-        <button class="primary-action" id="returnedButton" type="button">行动完成了，回来记录</button>
-        <button class="text-button" id="backToSafetyButton" type="button">返回环境检查</button>
-      </div>`;
-    el("fundLevelSelect").addEventListener("change", updateFundPreview);
-    el("fundGroupSelect").addEventListener("change", updateFundPreview);
-    el("returnedButton").addEventListener("click", () => {
-      trainingFlow.stage = "outcome";
-      renderTrainingDialog();
-    });
-    el("backToSafetyButton").addEventListener("click", () => {
-      trainingFlow.stage = "safety";
-      renderTrainingDialog();
-    });
-    return;
-  }
-
-  if (trainingFlow.stage === "outcome") {
-    content.innerHTML = `
-      <div class="dialog-step">
-        <p class="eyebrow">不评判结果</p>
-        <h2>刚才发生了什么？</h2>
-        <div class="outcome-grid">
-          <button class="outcome-button" type="button" data-outcome="completed"><strong>完成了主动交流</strong><span>不记录是否拿到联系方式</span></button>
-          <button class="outcome-button" type="button" data-outcome="graceful_exit"><strong>对方没兴趣，我自然退出</strong><span>这是一次完整而有边界的训练</span></button>
-          <button class="outcome-button" type="button" data-outcome="unsuitable"><strong>靠近后发现不合适</strong><span>我没有勉强打扰</span></button>
-          <button class="outcome-button" type="button" data-outcome="avoided"><strong>我回避了</strong><span>不扣分，只识别阻碍</span></button>
-        </div>
-      </div>`;
-    content.querySelectorAll("[data-outcome]").forEach((button) => {
-      button.addEventListener("click", () => {
-        const outcome = button.dataset.outcome;
-        if (outcome === "unsuitable") {
-          saveSimpleLog("unsuitable");
-          return;
-        }
-        trainingFlow.outcome = outcome;
-        trainingFlow.stage = outcome === "avoided" ? "avoidance-detail" : "action-detail";
-        renderTrainingDialog();
-      });
-    });
-    return;
-  }
-
-  if (trainingFlow.stage === "action-detail") {
-    const fundAmount = trainingFlow.beyondLimit ? 0 : courageFundAmount(trainingFlow.fundLevel, trainingFlow.fundGroup);
-    content.innerHTML = `
-      <form class="dialog-step" id="actionDetailForm">
-        <p class="eyebrow">生成一张新勇气卡</p>
-        <h2>${escapeHtml(OUTCOME_LABELS[trainingFlow.outcome])}</h2>
-        <div class="fund-confirmation">
-          <span>本次勇气储备金</span>
-          <strong>${fundAmount ? `+${formatMoney(fundAmount)}` : "今日已满 · 不再累计"}</strong>
-          <small>${escapeHtml(COURAGE_FUND_LEVELS[trainingFlow.fundLevel])} · ${escapeHtml(COURAGE_FUND_GROUPS[trainingFlow.fundGroup])} · 回应不影响入账</small>
-        </div>
         <label><span>本次搭讪场景（写入勇气卡和周复盘）</span><select id="trainingContext">${contextOptions(trainingFlow.context)}</select></label>
         <div class="slider-row">
           <div class="slider-label"><span>行动前预计焦虑</span><strong id="beforeValue">${trainingFlow.anxietyBefore} / 10</strong></div>
@@ -827,6 +926,8 @@ function renderTrainingDialog() {
       </form>`;
     bindRange("beforeRange", "beforeValue");
     bindRange("afterRange", "afterValue");
+    el("fundLevelSelect").addEventListener("change", updateFundPreview);
+    el("fundGroupSelect").addEventListener("change", updateFundPreview);
     el("actionDetailForm").addEventListener("submit", saveActionLog);
     return;
   }
@@ -871,6 +972,7 @@ function renderTrainingDialog() {
           <strong>${escapeHtml(card.quote)}</strong>
           <p>${escapeHtml(card.evidence)}</p>
         </div>
+        <p class="launch-latency-fact">从发现机会到开始行动：<strong>${formatLaunchLatency(card.launchLatencyMs)}</strong><span>只记录事实，不评价快慢。</span></p>
         <p class="reward-progress-copy">今日 ${Math.min(todayActions, dailyLimit)} / ${dailyLimit} 次${todayActions >= dailyLimit ? " · 已经完成，可以停止" : " · 每一次都在削弱回避的自动反应"}</p>
         <button class="primary-action" id="viewCardButton" type="button">去卡册翻开它</button>
         <button class="text-button" id="finishTrainingButton" type="button">完成本次记录</button>
@@ -952,6 +1054,8 @@ function generateEvidence(kind, before, after) {
 
 function saveActionLog(event) {
   event.preventDefault();
+  trainingFlow.fundLevel = el("fundLevelSelect").value;
+  trainingFlow.fundGroup = el("fundGroupSelect").value;
   const before = Number(el("beforeRange").value);
   const after = Number(el("afterRange").value);
   const context = el("trainingContext").value;
@@ -978,7 +1082,9 @@ function saveActionLog(event) {
     points,
     fundAmount,
     fundLevel: trainingFlow.fundLevel,
-    fundGroup: trainingFlow.fundGroup
+    fundGroup: trainingFlow.fundGroup,
+    launchedAt: trainingFlow.launchedAt,
+    launchLatencyMs: trainingFlow.launchLatencyMs
   };
   const log = {
     id: uid("log"),
@@ -992,6 +1098,8 @@ function saveActionLog(event) {
     fundAmount,
     fundLevel: trainingFlow.fundLevel,
     fundGroup: trainingFlow.fundGroup,
+    launchedAt: trainingFlow.launchedAt,
+    launchLatencyMs: trainingFlow.launchLatencyMs,
     cardId: card.id
   };
   state.cards.push(card);
