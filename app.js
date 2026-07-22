@@ -86,6 +86,22 @@ const OUTCOME_LABELS = {
   avoided: "我回避了"
 };
 
+const COURAGE_FUND_RATES = {
+  everyday: { solo: 0.05, companion: 0.2, group: 0.3 },
+  strong: { solo: 2, companion: 7.5, group: 10.5 }
+};
+
+const COURAGE_FUND_LEVELS = {
+  everyday: "一般心动",
+  strong: "特别心动"
+};
+
+const COURAGE_FUND_GROUPS = {
+  solo: "独自一人",
+  companion: "与 1 人同行",
+  group: "与 2 人及以上同行"
+};
+
 const DEFERRAL_REASONS = {
   rain: { label: "当晚有雨", icon: "☂" },
   busy: { label: "当晚有事", icon: "⌚" },
@@ -207,6 +223,20 @@ function actionLogs(logs = state.logs) {
   return logs.filter((log) => log.kind === "completed" || log.kind === "graceful_exit");
 }
 
+function courageFundAmount(level = "everyday", group = "solo") {
+  return Number(COURAGE_FUND_RATES[level]?.[group] || 0);
+}
+
+function courageFundTotal(logs = state.logs) {
+  return actionLogs(logs).reduce((sum, log) => sum + Number(log.fundAmount || 0), 0);
+}
+
+function formatMoney(value, signed = false) {
+  const amount = Number(value || 0);
+  if (!signed || amount === 0) return `¥${amount.toFixed(2)}`;
+  return `${amount > 0 ? "+" : "-"}¥${Math.abs(amount).toFixed(2)}`;
+}
+
 function trainingDayKeys(logs = currentWeekLogs()) {
   return [...new Set(actionLogs(logs).map((log) => dateKey(new Date(log.createdAt))))];
 }
@@ -305,6 +335,7 @@ function renderToday() {
 
   el("levelName").textContent = currentTitle().name;
   el("totalPoints").textContent = state.points;
+  el("heroFundTotal").textContent = formatMoney(courageFundTotal());
   el("todayAttempts").textContent = todayActions;
   el("todayLimit").textContent = ` / ${dailyLimit}`;
   el("trainingStatus").textContent = targetMet ? "本周4个完整训练日已完成" : `本周 ${completeDays.length} / ${target} 个完整训练日`;
@@ -411,6 +442,8 @@ function renderMap() {
     { icon: "♢", name: "迎着心跳", detail: "焦虑达到 7 分仍完成行动", unlocked: actionLogs(allLogs).some((log) => Number(log.anxietyBefore) >= 7) },
     { icon: "◐", name: "三日远征", detail: "一周完成 3 个间隔训练日", unlocked: hasSpacedThreeDays() },
     { icon: "⌁", name: "边界守护者", detail: "累计 5 次礼貌退出或不打扰", unlocked: allLogs.filter((log) => log.kind === "graceful_exit" || log.kind === "unsuitable").length >= 5 },
+    { icon: "¥", name: "第一枚勇气币", detail: "第一次把真实行动变成勇气预算", unlocked: courageFundTotal() > 0 },
+    { icon: "十", name: "稳定出手", detail: "累计完成 10 次尊重边界的接近", unlocked: actionLogs(allLogs).length >= 10 },
     { icon: "▣", name: "证据收藏家", detail: "收藏 20 张勇气卡", unlocked: state.cards.length >= 20 }
   ];
 
@@ -452,7 +485,7 @@ function renderCards() {
             </span>
             <span class="card-meta">
               <span>${escapeHtml(card.context)} · 焦虑 ${card.anxietyBefore} → ${card.anxietyAfter}</span>
-              <span>${escapeHtml(OUTCOME_LABELS[card.kind])} · +${card.points} 点</span>
+              <span>${escapeHtml(OUTCOME_LABELS[card.kind])} · +${card.points} 点${Number(card.fundAmount) > 0 ? ` · +${formatMoney(card.fundAmount)}` : ""}</span>
               <span class="card-evidence">${escapeHtml(card.evidence)}</span>
             </span>
           </span>
@@ -556,9 +589,10 @@ function renderReview() {
           : log.note
             ? escapeHtml(log.note)
             : `焦虑 ${log.anxietyBefore ?? "—"} → ${log.anxietyAfter ?? "—"}`;
+        const fundDetail = Number(log.fundAmount) > 0 ? ` · 储备金 +${formatMoney(log.fundAmount)}` : "";
         return `<article class="history-item">
           <i aria-hidden="true">${log.kind === "avoided" ? "○" : log.kind === "unsuitable" ? "◇" : "✓"}</i>
-          <div><strong>${escapeHtml(OUTCOME_LABELS[log.kind])}</strong><small>${detail}</small></div>
+          <div><strong>${escapeHtml(OUTCOME_LABELS[log.kind])}</strong><small>${detail}${fundDetail}</small></div>
           <span>${escapeHtml(formatTime(log.createdAt))}</span>
         </article>`;
       }).join("")
@@ -567,15 +601,31 @@ function renderReview() {
 
 function renderExpenses() {
   const expenses = currentWeekItems(state.expenses);
-  const total = expenses.reduce((sum, item) => sum + Number(item.amount || 0), 0);
-  el("expenseTotal").textContent = `¥${total.toFixed(2)}`;
+  const weekFund = courageFundTotal(currentWeekLogs());
+  const weekExpense = expenses.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+  const weekBalance = weekFund - weekExpense;
+  const lifetimeFund = courageFundTotal();
+  const lifetimeExpense = state.expenses.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+  const lifetimeBalance = lifetimeFund - lifetimeExpense;
+
+  el("fundWeekEarned").textContent = formatMoney(weekFund);
+  el("expenseTotal").textContent = formatMoney(weekExpense);
+  el("fundWeekBalance").textContent = formatMoney(weekBalance, true);
+  el("fundBalanceTotal").textContent = formatMoney(lifetimeBalance, true);
+  el("fundWeekBalanceCard").classList.toggle("positive", weekBalance > 0);
+  el("fundWeekBalanceCard").classList.toggle("negative", weekBalance < 0);
+  el("fundBalanceTotal").classList.toggle("positive", lifetimeBalance > 0);
+  el("fundBalanceTotal").classList.toggle("negative", lifetimeBalance < 0);
+  el("fundLifetimeText").textContent = lifetimeBalance >= 0
+    ? `累计行动积累 ${formatMoney(lifetimeFund)}，累计吃饭外开销 ${formatMoney(lifetimeExpense)}；目前还有 ${formatMoney(lifetimeBalance)} 勇气预算。`
+    : `累计行动积累 ${formatMoney(lifetimeFund)}，累计吃饭外开销 ${formatMoney(lifetimeExpense)}；开销高出 ${formatMoney(Math.abs(lifetimeBalance))}，不记为欠债。`;
   el("expenseList").innerHTML = expenses.length
     ? [...expenses].reverse().map((item) => `
         <article class="expense-item">
           <div><strong>${escapeHtml(item.category)}</strong><small>${escapeHtml(item.note || "无备注")}</small></div>
           <span>¥${Number(item.amount).toFixed(2)} · ${escapeHtml(formatShortDate(item.createdAt))}</span>
         </article>`).join("")
-    : `<div class="empty-state">尚未记录吃饭以外的开销。这里显示真实消费，不把不存在的会员费算成“省钱”。</div>`;
+    : `<div class="empty-state">尚未记录吃饭以外的开销。正结余只有在真正用于奖赏时才会成为现实激励。</div>`;
 }
 
 function renderAll() {
@@ -598,6 +648,8 @@ function openTrainingDialog() {
     anxietyAfter: 4,
     context: "商场",
     note: "",
+    fundLevel: "everyday",
+    fundGroup: "solo",
     reasonCategory: "",
     reasonText: "",
     beyondLimit: todayActions >= Number(state.settings.dailyLimit)
@@ -642,15 +694,43 @@ function renderTrainingDialog() {
 
   if (trainingFlow.stage === "action") {
     const ladder = LADDER_LEVELS[Number(state.settings.ladderLevel)] || LADDER_LEVELS[3];
+    const fundAmount = trainingFlow.beyondLimit ? 0 : courageFundAmount(trainingFlow.fundLevel, trainingFlow.fundGroup);
     content.innerHTML = `
       <div class="dialog-step">
         <p class="eyebrow">${escapeHtml(ladder.name)}</p>
         <h2>焦虑可以在场，你仍然能选择</h2>
         <div class="minimum-action"><span>今天的最小动作</span><strong>${escapeHtml(ladder.action)}</strong></div>
+        <div class="fund-config">
+          <div class="fund-config-heading">
+            <span>给这次勇气定一个即时奖赏</span>
+            <strong id="fundPreview" aria-live="polite">${trainingFlow.beyondLimit ? "今日已满，不再累计" : `+${formatMoney(fundAmount)}`}</strong>
+          </div>
+          <div class="fund-config-grid">
+            <label>
+              <span>主观心动程度</span>
+              <select id="fundLevelSelect">
+                <option value="everyday"${trainingFlow.fundLevel === "everyday" ? " selected" : ""}>一般心动</option>
+                <option value="strong"${trainingFlow.fundLevel === "strong" ? " selected" : ""}>特别心动</option>
+              </select>
+            </label>
+            <label>
+              <span>对方当时</span>
+              <select id="fundGroupSelect">
+                <option value="solo"${trainingFlow.fundGroup === "solo" ? " selected" : ""}>独自一人</option>
+                <option value="companion"${trainingFlow.fundGroup === "companion" ? " selected" : ""}>与 1 人同行</option>
+                <option value="group"${trainingFlow.fundGroup === "group" ? " selected" : ""}>与 2 人及以上同行</option>
+              </select>
+            </label>
+          </div>
+          <p>只记录你的主观挑战感和同行人数，不记录她的外貌细节；回应如何都不改变金额。</p>
+        </div>
+        <div class="launch-plan"><span>如果环境合适，而且我开始反复预测拒绝</span><strong>那么我先迈出一步，再允许焦虑跟上来。</strong></div>
         <p class="dialog-lead">不用寻找完美开场。说话真实、保持距离、给对方轻松退出的空间。</p>
-        <button class="primary-action" id="returnedButton" type="button">我行动完，回来记录</button>
+        <button class="primary-action" id="returnedButton" type="button">行动完成了，回来记录</button>
         <button class="text-button" id="backToSafetyButton" type="button">返回环境检查</button>
       </div>`;
+    el("fundLevelSelect").addEventListener("change", updateFundPreview);
+    el("fundGroupSelect").addEventListener("change", updateFundPreview);
     el("returnedButton").addEventListener("click", () => {
       trainingFlow.stage = "outcome";
       renderTrainingDialog();
@@ -690,10 +770,16 @@ function renderTrainingDialog() {
   }
 
   if (trainingFlow.stage === "action-detail") {
+    const fundAmount = trainingFlow.beyondLimit ? 0 : courageFundAmount(trainingFlow.fundLevel, trainingFlow.fundGroup);
     content.innerHTML = `
       <form class="dialog-step" id="actionDetailForm">
         <p class="eyebrow">生成一张新勇气卡</p>
         <h2>${escapeHtml(OUTCOME_LABELS[trainingFlow.outcome])}</h2>
+        <div class="fund-confirmation">
+          <span>本次勇气储备金</span>
+          <strong>${fundAmount ? `+${formatMoney(fundAmount)}` : "今日已满 · 不再累计"}</strong>
+          <small>${escapeHtml(COURAGE_FUND_LEVELS[trainingFlow.fundLevel])} · ${escapeHtml(COURAGE_FUND_GROUPS[trainingFlow.fundGroup])} · 回应不影响入账</small>
+        </div>
         <label><span>场景类别</span><select id="trainingContext">${contextOptions(trainingFlow.context)}</select></label>
         <div class="slider-row">
           <div class="slider-label"><span>行动前预计焦虑</span><strong id="beforeValue">${trainingFlow.anxietyBefore} / 10</strong></div>
@@ -737,15 +823,22 @@ function renderTrainingDialog() {
 
   if (trainingFlow.stage === "reward") {
     const card = trainingFlow.savedCard;
+    const todayActions = actionLogs(state.logs.filter((log) => dateKey(new Date(log.createdAt)) === dateKey())).length;
+    const dailyLimit = Number(state.settings.dailyLimit);
     content.innerHTML = `
       <div class="dialog-step">
-        <p class="eyebrow">${trainingFlow.beyondLimit ? "额外记录" : `+${card.points} 勇气值`}</p>
-        <h2>${trainingFlow.beyondLimit ? "今天已经足够，不必继续搜寻" : "大脑刚刚收到一条新证据"}</h2>
+        <p class="eyebrow">${trainingFlow.beyondLimit ? "额外记录 · 不再累计" : `+${card.points} 勇气值 · +${formatMoney(card.fundAmount)} 储备金`}</p>
+        <h2>${trainingFlow.beyondLimit ? "今天已经足够，不必继续搜寻" : "行动完成，奖励现在就到账"}</h2>
+        <div class="fund-reward${card.fundAmount ? "" : " capped"}">
+          <span aria-hidden="true">✦</span>
+          <div><small>勇气储备金</small><strong>${card.fundAmount ? `+${formatMoney(card.fundAmount)}` : "今日已满"}</strong><p>${card.fundAmount ? "无论对方如何回应，这次尊重边界的接近都已入账。" : "超过每日目标的行动可以记录，但不会驱动继续搜寻。"}</p></div>
+        </div>
         <div class="reward-reveal">
           <span class="big-symbol" aria-hidden="true">${cardSymbol(card)}</span>
           <strong>${escapeHtml(card.quote)}</strong>
           <p>${escapeHtml(card.evidence)}</p>
         </div>
+        <p class="reward-progress-copy">今日 ${Math.min(todayActions, dailyLimit)} / ${dailyLimit} 次${todayActions >= dailyLimit ? " · 已经完成，可以停止" : " · 每一次都在削弱回避的自动反应"}</p>
         <button class="primary-action" id="viewCardButton" type="button">去卡册翻开它</button>
         <button class="text-button" id="finishTrainingButton" type="button">完成本次记录</button>
       </div>`;
@@ -761,6 +854,13 @@ function bindRange(rangeId, valueId) {
   el(rangeId).addEventListener("input", (event) => {
     el(valueId).textContent = `${event.target.value} / 10`;
   });
+}
+
+function updateFundPreview() {
+  trainingFlow.fundLevel = el("fundLevelSelect").value;
+  trainingFlow.fundGroup = el("fundGroupSelect").value;
+  const amount = trainingFlow.beyondLimit ? 0 : courageFundAmount(trainingFlow.fundLevel, trainingFlow.fundGroup);
+  el("fundPreview").textContent = trainingFlow.beyondLimit ? "今日已满，不再累计" : `+${formatMoney(amount)}`;
 }
 
 function saveSimpleLog(kind) {
@@ -825,6 +925,7 @@ function saveActionLog(event) {
   const note = el("trainingNote").value.trim();
   const basePoints = trainingFlow.beyondLimit ? 0 : 3;
   const points = basePoints + (!trainingFlow.beyondLimit && before >= 6 ? 1 : 0);
+  const fundAmount = trainingFlow.beyondLimit ? 0 : courageFundAmount(trainingFlow.fundLevel, trainingFlow.fundGroup);
   const now = new Date().toISOString();
   const cardIndex = state.cards.length;
   const evidence = generateEvidence(trainingFlow.outcome, before, after);
@@ -841,7 +942,10 @@ function saveActionLog(event) {
     quote: cardQuote(trainingFlow.outcome, cardIndex + before),
     rarity: cardRarity(before),
     pattern: (cardIndex * 3 + before + new Date().getDate()) % 8,
-    points
+    points,
+    fundAmount,
+    fundLevel: trainingFlow.fundLevel,
+    fundGroup: trainingFlow.fundGroup
   };
   const log = {
     id: uid("log"),
@@ -852,6 +956,9 @@ function saveActionLog(event) {
     anxietyAfter: after,
     note,
     points,
+    fundAmount,
+    fundLevel: trainingFlow.fundLevel,
+    fundGroup: trainingFlow.fundGroup,
     cardId: card.id
   };
   state.cards.push(card);

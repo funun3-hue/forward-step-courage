@@ -41,7 +41,7 @@
             </div>
             <blockquote>今天的任务不是让她喜欢你。<br />是让恐惧不再替你做决定。</blockquote>
             <div class="today-count">
-              <span>今日实际接近</span>
+              <span class="today-label">今日实际接近<small><b id="heroFundTotal">¥0.00</b> 勇气储备</small></span>
               <strong><span id="todayAttempts">0</span><small id="todayLimit"> / 5</small></strong>
             </div>
             <button class="primary-action" id="startButton" type="button">
@@ -263,11 +263,28 @@
           <section class="section-block" aria-labelledby="expenseHeading">
             <div class="section-heading">
               <div>
-                <p class="eyebrow">真实账本</p>
-                <h2 id="expenseHeading">吃饭以外的本周开销</h2>
+                <p class="eyebrow">勇气储备账本</p>
+                <h2 id="expenseHeading">行动积累 × 吃饭外开销</h2>
               </div>
-              <strong id="expenseTotal">¥0.00</strong>
+              <strong class="fund-balance-total" id="fundBalanceTotal">¥0.00</strong>
             </div>
+            <div class="fund-ledger-summary">
+              <div class="fund-stat">
+                <span>本周行动积累</span>
+                <strong id="fundWeekEarned">¥0.00</strong>
+              </div>
+              <div class="fund-stat">
+                <span>本周吃饭外开销</span>
+                <strong id="expenseTotal">¥0.00</strong>
+              </div>
+              <div class="fund-stat balance" id="fundWeekBalanceCard">
+                <span>本周净额</span>
+                <strong id="fundWeekBalance">¥0.00</strong>
+              </div>
+              <p id="fundLifetimeText">累计行动积累与真实开销会在这里对抵。</p>
+            </div>
+            <p class="fund-rule-note">这是你为勇气设置的奖赏预算，不代表从任何人身上“赚到钱”；拒绝后自然离开同样入账，也不会形成欠债或惩罚。</p>
+            <h3 class="ledger-subheading">记录本周吃饭以外的真实开销</h3>
             <form class="expense-form" id="expenseForm">
               <label>
                 <span>金额</span>

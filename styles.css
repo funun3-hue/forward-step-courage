@@ -250,6 +250,20 @@ summary:focus-visible {
   font-size: 0.78rem;
 }
 
+.today-label {
+  display: grid;
+  gap: 4px;
+}
+
+.today-label small {
+  font-size: 0.65rem;
+}
+
+.today-label b {
+  color: var(--gold);
+  font-size: 0.76rem;
+}
+
 .primary-action,
 .secondary-action {
   position: relative;
@@ -1168,6 +1182,85 @@ summary:focus-visible {
   background: var(--surface);
 }
 
+.fund-balance-total {
+  color: var(--gold);
+  font-size: 1.05rem;
+  white-space: nowrap;
+}
+
+.fund-balance-total.positive {
+  color: var(--mint);
+}
+
+.fund-balance-total.negative {
+  color: var(--muted);
+}
+
+.fund-ledger-summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 9px;
+  margin: 16px 0 10px;
+}
+
+.fund-stat {
+  min-width: 0;
+  padding: 13px 10px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+}
+
+.fund-stat span,
+.fund-stat strong {
+  display: block;
+}
+
+.fund-stat span {
+  color: var(--muted);
+  font-size: 0.62rem;
+  line-height: 1.35;
+}
+
+.fund-stat strong {
+  margin-top: 7px;
+  color: var(--gold);
+  font-size: 0.94rem;
+  white-space: nowrap;
+}
+
+.fund-stat.balance.positive strong {
+  color: var(--mint);
+}
+
+.fund-stat.balance.negative strong {
+  color: var(--muted);
+}
+
+.fund-ledger-summary > p {
+  grid-column: 1 / -1;
+  margin: 2px 2px 0;
+  color: var(--text);
+  font-size: 0.7rem;
+  line-height: 1.55;
+}
+
+.fund-rule-note {
+  margin: 0 0 16px;
+  padding: 12px 13px;
+  border-left: 3px solid var(--mint);
+  border-radius: 0 12px 12px 0;
+  background: rgba(119, 201, 181, 0.06);
+  color: var(--muted);
+  font-size: 0.66rem;
+  line-height: 1.55;
+}
+
+.ledger-subheading {
+  margin: 0 0 10px;
+  font-size: 0.84rem;
+}
+
 .expense-form label,
 .sheet label {
   display: grid;
@@ -1384,6 +1477,154 @@ textarea::placeholder {
 .minimum-action span,
 .minimum-action strong {
   display: block;
+}
+
+.fund-config {
+  padding: 15px;
+  border: 1px solid rgba(255, 213, 142, 0.28);
+  border-radius: var(--radius-md);
+  background:
+    radial-gradient(circle at 92% 0%, rgba(255, 213, 142, 0.12), transparent 45%),
+    rgba(255, 213, 142, 0.045);
+}
+
+.fund-config-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.fund-config-heading span {
+  color: var(--peach);
+  font-size: 0.7rem;
+}
+
+.fund-config-heading strong {
+  color: var(--gold);
+  font-size: 1.08rem;
+  white-space: nowrap;
+}
+
+.fund-config-grid {
+  display: grid;
+  grid-template-columns: 0.85fr 1.15fr;
+  gap: 9px;
+  margin-top: 12px;
+}
+
+.fund-config > p {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 0.63rem;
+  line-height: 1.5;
+}
+
+.launch-plan {
+  display: grid;
+  gap: 6px;
+  padding: 13px 14px;
+  border-left: 3px solid var(--blue);
+  border-radius: 0 13px 13px 0;
+  background: rgba(117, 169, 232, 0.07);
+}
+
+.launch-plan span {
+  color: var(--muted);
+  font-size: 0.66rem;
+}
+
+.launch-plan strong {
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+.fund-confirmation {
+  display: grid;
+  gap: 5px;
+  padding: 14px 15px;
+  border: 1px solid rgba(255, 213, 142, 0.3);
+  border-radius: var(--radius-md);
+  background: rgba(255, 213, 142, 0.06);
+}
+
+.fund-confirmation span,
+.fund-confirmation small {
+  color: var(--muted);
+  font-size: 0.66rem;
+}
+
+.fund-confirmation strong {
+  color: var(--gold);
+  font-size: 1.25rem;
+}
+
+.fund-reward {
+  display: grid;
+  grid-template-columns: 46px 1fr;
+  gap: 13px;
+  align-items: center;
+  padding: 16px;
+  border: 1px solid rgba(255, 213, 142, 0.36);
+  border-radius: var(--radius-md);
+  background:
+    radial-gradient(circle at 8% 50%, rgba(255, 213, 142, 0.22), transparent 34%),
+    rgba(255, 213, 142, 0.07);
+  animation: reward-pop 420ms ease both;
+}
+
+.fund-reward > span {
+  display: grid;
+  width: 46px;
+  height: 46px;
+  place-items: center;
+  border-radius: 50%;
+  background: linear-gradient(145deg, var(--gold), var(--peach));
+  color: #182039;
+  font-size: 1.2rem;
+  box-shadow: 0 0 26px rgba(255, 213, 142, 0.24);
+}
+
+.fund-reward small,
+.fund-reward strong,
+.fund-reward p {
+  display: block;
+}
+
+.fund-reward small {
+  color: var(--peach);
+  font-size: 0.66rem;
+}
+
+.fund-reward strong {
+  margin-top: 3px;
+  color: var(--gold);
+  font-size: 1.4rem;
+}
+
+.fund-reward p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 0.64rem;
+  line-height: 1.45;
+}
+
+.fund-reward.capped {
+  border-color: var(--line);
+  background: var(--surface);
+}
+
+.reward-progress-copy {
+  margin: -2px 0 0;
+  color: var(--mint);
+  font-size: 0.7rem;
+  line-height: 1.5;
+  text-align: center;
+}
+
+@keyframes reward-pop {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
 }
 
 .minimum-action span {
