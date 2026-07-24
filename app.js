@@ -12,23 +12,23 @@ const LADDER_LEVELS = [
 ];
 
 const TITLES = [
-  { name: "搭讪小白", threshold: 0 },
-  { name: "初见勇气", threshold: 12 },
-  { name: "学有所成", threshold: 30 },
-  { name: "搭讪入门", threshold: 60 },
-  { name: "搭讪筑基", threshold: 100 },
-  { name: "从容行者", threshold: 160 },
-  { name: "搭讪大师", threshold: 260 },
-  { name: "真诚自如", threshold: 420 }
+  { name: "搭讪小白", threshold: 0, actions: 0 },
+  { name: "初见勇气", threshold: 20, actions: 5 },
+  { name: "学有所成", threshold: 80, actions: 20 },
+  { name: "搭讪入门", threshold: 200, actions: 50 },
+  { name: "搭讪筑基", threshold: 500, actions: 125 },
+  { name: "从容行者", threshold: 1000, actions: 250 },
+  { name: "搭讪大师", threshold: 2000, actions: 500 },
+  { name: "真诚自如", threshold: 4000, actions: 1000 }
 ];
 
 const MAP_REGIONS = [
   { name: "起步港", threshold: 0, position: [61, 351] },
-  { name: "回声林", threshold: 12, position: [123, 278] },
-  { name: "边界丘", threshold: 30, position: [190, 213] },
-  { name: "星光原", threshold: 60, position: [251, 147] },
-  { name: "从容城", threshold: 100, position: [315, 79] },
-  { name: "自在峰", threshold: 160, position: [339, 28] }
+  { name: "回声林", threshold: 20, position: [123, 278] },
+  { name: "边界丘", threshold: 80, position: [190, 213] },
+  { name: "星光原", threshold: 200, position: [251, 147] },
+  { name: "从容城", threshold: 500, position: [315, 79] },
+  { name: "自在峰", threshold: 1000, position: [339, 28] }
 ];
 
 const REASON_GROUPS = {
@@ -102,6 +102,12 @@ const COURAGE_FUND_GROUPS = {
   group: "与 2 人及以上同行"
 };
 
+const GROUP_COMPOSITIONS = {
+  unspecified: "未记录同行构成",
+  women_only: "同行者均为女性",
+  includes_man: "同行者中有男性"
+};
+
 const BOUNDARY_CHECKS = [
   "对方没有明显赶路、通话、戴耳机或处理工作。",
   "保持距离，对方慌乱拒绝后不过分纠缠。",
@@ -135,7 +141,7 @@ const CONTEXTS = [
 const WEEKDAY_NAMES = ["一", "二", "三", "四", "五", "六", "日"];
 
 const defaultState = {
-  version: 3,
+  version: 4,
   points: 0,
   settings: {
     weeklyTarget: 4,
@@ -177,7 +183,7 @@ function loadState() {
       migrated.settings.weeklyTarget = 4;
       migrated.settings.dailyLimit = 5;
     }
-    migrated.version = 3;
+    migrated.version = 4;
     return migrated;
   } catch (error) {
     console.warn("无法读取本地数据，已使用默认设置。", error);
@@ -294,12 +300,13 @@ function formatLaunchLatency(value) {
   return `${(milliseconds / 1000).toFixed(1)} 秒`;
 }
 
-function currentTitle(points = state.points) {
-  return [...TITLES].reverse().find((title) => points >= title.threshold) || TITLES[0];
+function currentTitle(points = state.points, actions = actionLogs().length) {
+  return [...TITLES].reverse().find((title) => points >= title.threshold && actions >= title.actions) || TITLES[0];
 }
 
-function nextTitle(points = state.points) {
-  return TITLES.find((title) => title.threshold > points) || null;
+function nextTitle(points = state.points, actions = actionLogs().length) {
+  const current = currentTitle(points, actions);
+  return TITLES[TITLES.indexOf(current) + 1] || null;
 }
 
 function currentMapRegion(points = state.points) {
@@ -360,12 +367,25 @@ function renderToday() {
   const dailyLimit = Number(state.settings.dailyLimit);
   const targetMet = completeDays.length >= target;
   const todayDeferral = deferrals.find((item) => item.fromDate === dateKey());
+  const weekActions = actionLogs(weekLogs);
+  const weekFund = courageFundTotal(weekLogs);
+  const weekExpense = currentWeekItems(state.expenses).reduce((sum, item) => sum + Number(item.amount || 0), 0);
+  const weekBalance = weekFund - weekExpense;
 
   el("boundaryList").innerHTML = BOUNDARY_CHECKS.map((item) => `<li>${escapeHtml(item)}</li>`).join("");
 
   el("levelName").textContent = currentTitle().name;
   el("totalPoints").textContent = state.points;
   el("heroFundTotal").textContent = formatMoney(courageFundTotal());
+  el("homeWeekActions").textContent = weekActions.length;
+  el("homeWeekFund").textContent = formatMoney(weekFund);
+  el("homeWeekBalance").textContent = formatMoney(weekBalance, true);
+  el("homeWeekBalance").classList.toggle("negative", weekBalance < 0);
+  el("homeMomentumMessage").textContent = weekActions.length
+    ? weekBalance >= 0
+      ? `本周 ${weekActions.length} 次真实出手已经留下 ${formatMoney(weekFund)}；下一次会继续同时推进训练和储备。`
+      : `本周行动已经真实积累 ${formatMoney(weekFund)}；开销只是对照，不会把勇气记成欠债。`
+    : "第一次行动会同时点亮训练进度和勇气储备。";
   el("todayAttempts").textContent = todayActions;
   el("todayLimit").textContent = ` / ${dailyLimit}`;
   el("trainingStatus").textContent = targetMet ? "本周4个完整训练日已完成" : `本周 ${completeDays.length} / ${target} 个完整训练日`;
@@ -456,38 +476,114 @@ function renderMap() {
     : "六个区域已全部点亮";
 
   const next = nextTitle();
-  el("titleProgressText").textContent = next ? `${state.points} / ${next.threshold}` : `${state.points} · 顶级`;
+  const actionCount = actionLogs().length;
+  el("titleProgressText").textContent = next
+    ? `${Math.min(state.points, next.threshold)}/${next.threshold} 点 · ${Math.min(actionCount, next.actions)}/${next.actions} 次`
+    : `${state.points} 点 · ${actionCount} 次 · 顶级`;
   el("titleRoad").innerHTML = TITLES.map((title) => {
-    const unlocked = state.points >= title.threshold;
+    const unlocked = state.points >= title.threshold && actionCount >= title.actions;
     return `<div class="title-step${unlocked ? " unlocked" : ""}">
       <span class="title-node">${unlocked ? "✓" : "·"}</span>
       <strong>${escapeHtml(title.name)}</strong>
-      <small>${title.threshold} 点</small>
+      <small>${title.threshold} 点 · ${title.actions} 次</small>
     </div>`;
   }).join("");
 
   const allLogs = state.logs;
+  const allActions = actionLogs(allLogs);
+  const pairedActions = allActions.filter((log) => log.fundGroup === "companion");
+  const groupActions = allActions.filter((log) => log.fundGroup === "group");
+  const includesManActions = allActions.filter((log) => log.fundGroup !== "solo" && log.groupComposition === "includes_man");
+  const boundaryCount = allLogs.filter((log) => log.kind === "graceful_exit" || log.kind === "unsuitable").length;
+  const hasHighAnxietyAction = allActions.some((log) => Number(log.anxietyBefore) >= 7);
+  const spacedDayProgress = Math.min(trainingDayKeys().length, 3);
   const achievements = [
-    { icon: "✦", name: "初次启程", detail: "获得第一张真实行动卡", unlocked: state.cards.length >= 1 },
-    { icon: "♢", name: "迎着心跳", detail: "焦虑达到 7 分仍完成行动", unlocked: actionLogs(allLogs).some((log) => Number(log.anxietyBefore) >= 7) },
-    { icon: "◐", name: "三日远征", detail: "一周完成 3 个间隔训练日", unlocked: hasSpacedThreeDays() },
-    { icon: "⌁", name: "边界守护者", detail: "累计 5 次礼貌退出或不打扰", unlocked: allLogs.filter((log) => log.kind === "graceful_exit" || log.kind === "unsuitable").length >= 5 },
-    { icon: "¥", name: "第一枚勇气币", detail: "第一次把真实行动变成勇气预算", unlocked: courageFundTotal() > 0 },
-    { icon: "十", name: "稳定出手", detail: "累计完成 10 次尊重边界的接近", unlocked: actionLogs(allLogs).length >= 10 },
-    { icon: "▣", name: "证据收藏家", detail: "收藏 20 张勇气卡", unlocked: state.cards.length >= 20 }
+    { icon: "✦", name: "初次启程", detail: "获得第一张真实行动卡", progress: state.cards.length, target: 1 },
+    { icon: "♢", name: "迎着心跳", detail: "焦虑达到 7 分仍完成行动", progress: hasHighAnxietyAction ? 1 : 0, target: 1 },
+    { icon: "◐", name: "三日远征", detail: "一周完成 3 个间隔训练日", progress: spacedDayProgress, target: 3, unlocked: hasSpacedThreeDays() },
+    { icon: "⌁", name: "边界守护者", detail: "累计 5 次礼貌退出或不打扰", progress: boundaryCount, target: 5 },
+    { icon: "¥", name: "第一枚勇气币", detail: "第一次把真实行动变成勇气预算", progress: courageFundTotal() > 0 ? 1 : 0, target: 1 },
+    { icon: "十", name: "稳定出手", detail: "累计完成 10 次尊重边界的接近", progress: allActions.length, target: 10 },
+    { icon: "▣", name: "证据收藏家", detail: "收藏 20 张勇气卡", progress: state.cards.length, target: 20 },
+    { icon: "Ⅱ", name: "双人组·初次", detail: "第一次向有 1 位同行者的目标开口", progress: pairedActions.length, target: 1 },
+    { icon: "Ⅱ", name: "双人组·三次", detail: "完成 3 次双人组主动交流", progress: pairedActions.length, target: 3 },
+    { icon: "Ⅱ", name: "双人组·五次", detail: "完成 5 次双人组主动交流", progress: pairedActions.length, target: 5 },
+    { icon: "♂", name: "旁人目光·初次", detail: "第一次向含男性同行者的组合开口", progress: includesManActions.length, target: 1 },
+    { icon: "♂", name: "旁人目光·三次", detail: "完成 3 次含男性同行者的组合交流", progress: includesManActions.length, target: 3 },
+    { icon: "Ⅲ", name: "三人组·初次", detail: "第一次向三人及以上组合开口", progress: groupActions.length, target: 1 },
+    { icon: "Ⅲ", name: "三人组·三次", detail: "完成 3 次三人及以上组合交流", progress: groupActions.length, target: 3 },
+    { icon: "Ⅲ", name: "三人组·十次", detail: "完成 10 次三人及以上组合交流", progress: groupActions.length, target: 10 }
   ];
 
+  achievements.forEach((item) => {
+    if (typeof item.unlocked !== "boolean") item.unlocked = item.progress >= item.target;
+  });
   el("achievementCount").textContent = `${achievements.filter((item) => item.unlocked).length} / ${achievements.length}`;
-  el("achievementGrid").innerHTML = achievements.map((item) => `
+  el("achievementGrid").innerHTML = achievements.map((item) => {
+    const shownProgress = Math.min(item.progress, item.target);
+    return `
     <article class="achievement${item.unlocked ? " unlocked" : ""}">
       <i aria-hidden="true">${item.icon}</i>
       <strong>${item.name}</strong>
       <small>${item.detail}</small>
-    </article>`).join("");
+      <span class="achievement-progress"><span><i style="width:${(shownProgress / item.target) * 100}%"></i></span><b>${shownProgress}/${item.target}</b></span>
+    </article>`;
+  }).join("");
 }
 
 function cardSymbol(card) {
   return ["勇", "行", "真", "定", "进", "界", "光", "诚"][Number(card.pattern) % 8];
+}
+
+function cardBackMessage(card, index) {
+  const common = [
+    "这一步由我选择，不由恐惧代劳。",
+    "我先行动，再让情绪慢慢跟上。",
+    "一次开口，给大脑一次新证据。",
+    "我没有等到完美状态才开始。",
+    "今天的我，比预测多走了一步。",
+    "结果未知，行动已经真实发生。",
+    "我把脑内推演换成了现实经验。",
+    "紧张没有消失，我仍然能行动。",
+    "我练习主动，也练习尊重答案。",
+    "这张卡证明：我可以开始。",
+    "我允许心跳加快，也允许自己向前。",
+    "行动不是审判，只是一次练习。",
+    "我把机会交给现实，不交给想象。",
+    "我没有要求成功，只要求亲自选择。",
+    "今天积累的，是下一次更自然的开始。",
+    "一个真实动作，正在改写旧反应。",
+    "我能靠近，也能保留彼此的空间。",
+    "被看见并不可怕，我仍是完整的。",
+    "我不需要控制回应，只需要守住真诚。",
+    "这一次不是胜负，是能力的重复。",
+    "我让勇气留下了可以翻看的证据。",
+    "我完成的是出手，不是讨好。",
+    "恐惧说停下时，我仍保留选择权。",
+    "今天这一小步，会成为以后的一部分。"
+  ];
+  const exits = [
+    "我听懂了她的答案，也从容结束。",
+    "自然离开，让这次行动保持完整。",
+    "尊重拒绝，也是我正在增长的能力。",
+    "我没有纠缠，所以这仍是一张勇气卡。",
+    "没有继续，不等于这一步没有价值。",
+    "我守住边界，也守住了自己的体面。"
+  ];
+  const groups = [
+    "旁人的目光没有替我做决定。",
+    "人多让挑战变大，也让这张卡更真实。",
+    "我穿过了被注视的感觉，仍然开了口。",
+    "组合场景更难，但我已经拥有一次证据。",
+    "我面对的不只是一人，也没有后退。",
+    "环境更复杂，我依然保持自然和边界。"
+  ];
+  const pool = card.fundGroup === "companion" || card.fundGroup === "group"
+    ? [...groups, ...common]
+    : card.kind === "graceful_exit"
+      ? [...exits, ...common]
+      : common;
+  return pool[Math.max(0, index) % pool.length];
 }
 
 function renderCards() {
@@ -497,15 +593,15 @@ function renderCards() {
     return;
   }
 
-  el("cardGrid").innerHTML = [...state.cards]
-    .reverse()
-    .map((card) => `
+  const reversedCards = [...state.cards].reverse();
+  el("cardGrid").innerHTML = reversedCards
+    .map((card, displayIndex) => `
       <button class="courage-card" type="button" aria-label="翻开${escapeHtml(card.title)}" aria-pressed="false">
         <span class="card-inner">
           <span class="card-face card-back pattern-${Number(card.pattern) % 8}">
             <span class="card-rarity">${escapeHtml(card.rarity)} · 勇气卡</span>
             <span class="card-emblem">${cardSymbol(card)}</span>
-            <span class="card-back-bottom"><span class="card-date">${escapeHtml(formatShortDate(card.createdAt))}</span><strong>${escapeHtml(card.quote)}</strong></span>
+            <span class="card-back-bottom"><span class="card-date">${escapeHtml(formatShortDate(card.createdAt))}</span><strong>${escapeHtml(cardBackMessage(card, reversedCards.length - 1 - displayIndex))}</strong></span>
           </span>
           <span class="card-face card-front">
             <span>
@@ -514,7 +610,7 @@ function renderCards() {
               <blockquote>${escapeHtml(card.quote)}</blockquote>
             </span>
             <span class="card-meta">
-              <span>${escapeHtml(card.context)} · 焦虑 ${card.anxietyBefore} → ${card.anxietyAfter}</span>
+              <span>${escapeHtml(card.context)} · ${escapeHtml(COURAGE_FUND_GROUPS[card.fundGroup] || "同行情况未记录")} · 焦虑 ${card.anxietyBefore} → ${card.anxietyAfter}</span>
               <span>${escapeHtml(OUTCOME_LABELS[card.kind])} · +${card.points} 点${Number(card.fundAmount) > 0 ? ` · +${formatMoney(card.fundAmount)}` : ""}</span>
               <span class="card-evidence">${escapeHtml(card.evidence)}</span>
             </span>
@@ -696,7 +792,6 @@ function renderReview() {
         </article>`).join("")
     : `<div class="empty-state">完成一次真实行动后，新证据会出现在这里。</div>`;
 
-  renderExpenses();
   el("historyList").innerHTML = logs.length
     ? [...logs].reverse().map((log) => {
         const detail = log.kind === "avoided"
@@ -705,6 +800,9 @@ function renderReview() {
             ? escapeHtml(log.note)
             : `焦虑 ${log.anxietyBefore ?? "—"} → ${log.anxietyAfter ?? "—"}`;
         const contextDetail = log.context && log.context !== "未记录" ? `${escapeHtml(log.context)} · ` : "";
+        const groupDetail = actionLogs([log]).length && log.fundGroup
+          ? `${escapeHtml(COURAGE_FUND_GROUPS[log.fundGroup] || "同行情况未记录")}${log.fundGroup !== "solo" && log.groupComposition && log.groupComposition !== "unspecified" ? ` · ${escapeHtml(GROUP_COMPOSITIONS[log.groupComposition])}` : ""} · `
+          : "";
         const fundDetail = Number(log.fundAmount) > 0 ? ` · 储备金 +${formatMoney(log.fundAmount)}` : "";
         const launchDetail = actionLogs([log]).length
           ? log.launchLatencyMs !== null && log.launchLatencyMs !== undefined && log.launchLatencyMs !== "" && Number.isFinite(Number(log.launchLatencyMs)) && Number(log.launchLatencyMs) >= 0
@@ -713,7 +811,7 @@ function renderReview() {
           : "";
         return `<article class="history-item">
           <i aria-hidden="true">${log.kind === "avoided" ? "○" : log.kind === "unsuitable" ? "◇" : "✓"}</i>
-          <div><strong>${escapeHtml(OUTCOME_LABELS[log.kind])}</strong><small>${contextDetail}${detail}${fundDetail}${launchDetail}</small></div>
+          <div><strong>${escapeHtml(OUTCOME_LABELS[log.kind])}</strong><small>${contextDetail}${groupDetail}${detail}${fundDetail}${launchDetail}</small></div>
           <span>${escapeHtml(formatTime(log.createdAt))}</span>
         </article>`;
       }).join("")
@@ -728,6 +826,7 @@ function renderExpenses() {
   const lifetimeFund = courageFundTotal();
   const lifetimeExpense = state.expenses.reduce((sum, item) => sum + Number(item.amount || 0), 0);
   const lifetimeBalance = lifetimeFund - lifetimeExpense;
+  const lifetimeActions = actionLogs().length;
 
   el("fundWeekEarned").textContent = formatMoney(weekFund);
   el("expenseTotal").textContent = formatMoney(weekExpense);
@@ -737,6 +836,12 @@ function renderExpenses() {
   el("fundWeekBalanceCard").classList.toggle("negative", weekBalance < 0);
   el("fundBalanceTotal").classList.toggle("positive", lifetimeBalance > 0);
   el("fundBalanceTotal").classList.toggle("negative", lifetimeBalance < 0);
+  el("ledgerActionCount").textContent = lifetimeActions;
+  el("fundLifetimeEarned").textContent = formatMoney(lifetimeFund);
+  el("expenseLifetimeTotal").textContent = formatMoney(lifetimeExpense);
+  el("ledgerActionSummary").textContent = lifetimeActions
+    ? `${lifetimeActions} 次真实出手，已经留下 ${formatMoney(lifetimeFund)} 行动积累。`
+    : "还没有行动入账。第一笔会从真实出手开始。";
   el("fundLifetimeText").textContent = lifetimeBalance >= 0
     ? `累计行动积累 ${formatMoney(lifetimeFund)}，累计吃饭外开销 ${formatMoney(lifetimeExpense)}；目前还有 ${formatMoney(lifetimeBalance)} 勇气预算。`
     : `累计行动积累 ${formatMoney(lifetimeFund)}，累计吃饭外开销 ${formatMoney(lifetimeExpense)}；开销高出 ${formatMoney(Math.abs(lifetimeBalance))}，不记为欠债。`;
@@ -747,6 +852,24 @@ function renderExpenses() {
           <span>¥${Number(item.amount).toFixed(2)} · ${escapeHtml(formatShortDate(item.createdAt))}</span>
         </article>`).join("")
     : `<div class="empty-state">尚未记录吃饭以外的开销。正结余只有在真正用于奖赏时才会成为现实激励。</div>`;
+
+  const incomeLogs = [...actionLogs()]
+    .filter((log) => Number(log.fundAmount) > 0)
+    .reverse()
+    .slice(0, 10);
+  el("fundIncomeList").innerHTML = incomeLogs.length
+    ? incomeLogs.map((log) => {
+        const group = COURAGE_FUND_GROUPS[log.fundGroup] || "同行情况未记录";
+        const composition = log.fundGroup !== "solo" && log.groupComposition && log.groupComposition !== "unspecified"
+          ? ` · ${GROUP_COMPOSITIONS[log.groupComposition]}`
+          : "";
+        return `<article class="fund-income-item">
+          <i aria-hidden="true">＋</i>
+          <div><strong>${escapeHtml(log.context || "场景未记录")} · ${escapeHtml(group)}</strong><small>${escapeHtml(formatShortDate(log.createdAt))}${escapeHtml(composition)}</small></div>
+          <span>+${formatMoney(log.fundAmount)}</span>
+        </article>`;
+      }).join("")
+    : `<div class="empty-state">完成一次真实主动交流或礼貌退出后，第一笔勇气入账会出现在这里。</div>`;
 }
 
 function renderAll() {
@@ -754,6 +877,7 @@ function renderAll() {
   renderMap();
   renderCards();
   renderReview();
+  renderExpenses();
 }
 
 function contextOptions(selected = "商场") {
@@ -776,6 +900,7 @@ function openTrainingDialog() {
     note: "",
     fundLevel: "everyday",
     fundGroup: "solo",
+    groupComposition: "unspecified",
     reasonCategory: "",
     reasonText: "",
     beyondLimit: todayActions >= Number(state.settings.dailyLimit)
@@ -910,6 +1035,12 @@ function renderTrainingDialog() {
               </select>
             </label>
           </div>
+          <label class="group-composition-field${trainingFlow.fundGroup === "solo" ? " hidden" : ""}" id="groupCompositionField">
+            <span>同行构成（只用于组合成就）</span>
+            <select id="groupCompositionSelect">
+              ${Object.entries(GROUP_COMPOSITIONS).map(([key, label]) => `<option value="${key}"${trainingFlow.groupComposition === key ? " selected" : ""}>${escapeHtml(label)}</option>`).join("")}
+            </select>
+          </label>
           <p>只记录你的主观挑战感和同行人数，不记录她的外貌细节；回应如何都不改变金额。</p>
         </div>
         <label><span>本次搭讪场景（写入勇气卡和周复盘）</span><select id="trainingContext">${contextOptions(trainingFlow.context)}</select></label>
@@ -928,6 +1059,9 @@ function renderTrainingDialog() {
     bindRange("afterRange", "afterValue");
     el("fundLevelSelect").addEventListener("change", updateFundPreview);
     el("fundGroupSelect").addEventListener("change", updateFundPreview);
+    el("groupCompositionSelect").addEventListener("change", () => {
+      trainingFlow.groupComposition = el("groupCompositionSelect").value;
+    });
     el("actionDetailForm").addEventListener("submit", saveActionLog);
     return;
   }
@@ -959,6 +1093,11 @@ function renderTrainingDialog() {
     const card = trainingFlow.savedCard;
     const todayActions = actionLogs(state.logs.filter((log) => dateKey(new Date(log.createdAt)) === dateKey())).length;
     const dailyLimit = Number(state.settings.dailyLimit);
+    const weekLogs = currentWeekLogs();
+    const weekActions = actionLogs(weekLogs).length;
+    const weekFund = courageFundTotal(weekLogs);
+    const weekExpense = currentWeekItems(state.expenses).reduce((sum, item) => sum + Number(item.amount || 0), 0);
+    const weekBalance = weekFund - weekExpense;
     content.innerHTML = `
       <div class="dialog-step">
         <p class="eyebrow">${trainingFlow.beyondLimit ? "额外记录 · 不再累计" : `+${card.points} 勇气值 · +${formatMoney(card.fundAmount)} 储备金`}</p>
@@ -973,10 +1112,20 @@ function renderTrainingDialog() {
           <p>${escapeHtml(card.evidence)}</p>
         </div>
         <p class="launch-latency-fact">从发现机会到开始行动：<strong>${formatLaunchLatency(card.launchLatencyMs)}</strong><span>只记录事实，不评价快慢。</span></p>
+        <div class="reward-momentum-stats">
+          <div><span>本周真实出手</span><strong>${weekActions} 次</strong></div>
+          <div><span>本周勇气储备</span><strong>${formatMoney(weekFund)}</strong></div>
+          <div><span>当前本周净额</span><strong>${formatMoney(weekBalance, true)}</strong></div>
+        </div>
         <p class="reward-progress-copy">今日 ${Math.min(todayActions, dailyLimit)} / ${dailyLimit} 次${todayActions >= dailyLimit ? " · 已经完成，可以停止" : " · 每一次都在削弱回避的自动反应"}</p>
-        <button class="primary-action" id="viewCardButton" type="button">去卡册翻开它</button>
+        <button class="primary-action" id="rewardLedgerButton" type="button">查看刚刚入账</button>
+        <button class="secondary-action" id="viewCardButton" type="button">去卡册翻开它</button>
         <button class="text-button" id="finishTrainingButton" type="button">完成本次记录</button>
       </div>`;
+    el("rewardLedgerButton").addEventListener("click", () => {
+      closeDialog(el("trainingDialog"));
+      switchView("ledgerView", "勇气账本");
+    });
     el("viewCardButton").addEventListener("click", () => {
       closeDialog(el("trainingDialog"));
       switchView("cardsView", "勇气卡册");
@@ -994,6 +1143,9 @@ function bindRange(rangeId, valueId) {
 function updateFundPreview() {
   trainingFlow.fundLevel = el("fundLevelSelect").value;
   trainingFlow.fundGroup = el("fundGroupSelect").value;
+  const compositionField = el("groupCompositionField");
+  compositionField?.classList.toggle("hidden", trainingFlow.fundGroup === "solo");
+  if (trainingFlow.fundGroup === "solo") trainingFlow.groupComposition = "unspecified";
   const amount = trainingFlow.beyondLimit ? 0 : courageFundAmount(trainingFlow.fundLevel, trainingFlow.fundGroup);
   el("fundPreview").textContent = trainingFlow.beyondLimit ? "今日已满，不再累计" : `+${formatMoney(amount)}`;
 }
@@ -1031,7 +1183,19 @@ function cardQuote(kind, index) {
     "一次真实行动，胜过十次脑内推演。",
     "结果属于双方，行动属于我。",
     "我可以真诚靠近，也可以从容离开。",
-    "拒绝不是审判，只是两个人此刻不匹配。"
+    "拒绝不是审判，只是两个人此刻不匹配。",
+    "我不需要等焦虑同意，才允许自己行动。",
+    "真实世界的一个答案，胜过脑内的一百种预测。",
+    "我能承受不确定，也能保持真诚。",
+    "行动让我增长，回应不定义我的价值。",
+    "今天不是证明自己，而是扩展自己的选择。",
+    "每一次自然开口，都在削弱自动回避。",
+    "我只负责表达，不负责安排结果。",
+    "我愿意被现实校准，而不是被恐惧说服。",
+    "紧张是一种感觉，不是一道禁令。",
+    "我把注意力带回当下，然后完成一步。",
+    "勇气可以很小，但必须是真实发生的。",
+    "我正在练习一种以后会感谢自己的能力。"
   ];
   const exits = [
     "我尊重她的答案，也守住自己的完整。",
@@ -1056,6 +1220,7 @@ function saveActionLog(event) {
   event.preventDefault();
   trainingFlow.fundLevel = el("fundLevelSelect").value;
   trainingFlow.fundGroup = el("fundGroupSelect").value;
+  trainingFlow.groupComposition = trainingFlow.fundGroup === "solo" ? "unspecified" : el("groupCompositionSelect").value;
   const before = Number(el("beforeRange").value);
   const after = Number(el("afterRange").value);
   const context = el("trainingContext").value;
@@ -1083,6 +1248,7 @@ function saveActionLog(event) {
     fundAmount,
     fundLevel: trainingFlow.fundLevel,
     fundGroup: trainingFlow.fundGroup,
+    groupComposition: trainingFlow.groupComposition,
     launchedAt: trainingFlow.launchedAt,
     launchLatencyMs: trainingFlow.launchLatencyMs
   };
@@ -1098,6 +1264,7 @@ function saveActionLog(event) {
     fundAmount,
     fundLevel: trainingFlow.fundLevel,
     fundGroup: trainingFlow.fundGroup,
+    groupComposition: trainingFlow.groupComposition,
     launchedAt: trainingFlow.launchedAt,
     launchLatencyMs: trainingFlow.launchLatencyMs,
     cardId: card.id
@@ -1261,6 +1428,7 @@ function initEvents() {
   el("deferButton").addEventListener("click", openDeferralDialog);
   el("settingsButton").addEventListener("click", openSettings);
   el("editRewardButton").addEventListener("click", openSettings);
+  el("openLedgerButton").addEventListener("click", () => switchView("ledgerView", "勇气账本"));
   el("closeTrainingButton").addEventListener("click", () => closeDialog(el("trainingDialog")));
   el("closeSettingsButton").addEventListener("click", () => closeDialog(el("settingsDialog")));
   el("closeDeferralButton").addEventListener("click", () => closeDialog(el("deferralDialog")));
@@ -1296,7 +1464,7 @@ function initEvents() {
     });
     saveState();
     event.currentTarget.reset();
-    renderExpenses();
+    renderAll();
     showToast("真实开销已记录");
   });
 
