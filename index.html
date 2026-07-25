@@ -48,18 +48,10 @@
               <span><i class="legend-deferred"></i>顺延</span>
               <span><i class="legend-neutral"></i>休息/未安排</span>
             </div>
-            <div class="week-status-banner" id="weekStatusBanner"></div>
             <button class="defer-action" id="deferButton" type="button">
               <span aria-hidden="true">↷</span>
               今晚无法完成，顺延一天
             </button>
-            <div class="rest-pass" id="restPass">
-              <span class="rest-icon" aria-hidden="true">◐</span>
-              <div>
-                <strong>主动休息券尚未获得</strong>
-                <p>前六天完成 3 个间隔训练日后获得；漏一天不会清零。</p>
-              </div>
-            </div>
           </section>
 
           <section class="momentum-card" aria-labelledby="momentumHeading">
@@ -75,7 +67,6 @@
               <div><span>本周勇气储备</span><strong id="homeWeekFund">¥0.00</strong></div>
               <div><span>扣除开销后净额</span><strong id="homeWeekBalance">¥0.00</strong></div>
             </div>
-            <p id="homeMomentumMessage">第一次行动会同时点亮训练进度和勇气储备。</p>
           </section>
 
           <article class="hero-card">
@@ -116,24 +107,16 @@
             </div>
           </section>
 
-          <details class="boundary-card">
-            <summary>三条边界检查</summary>
-            <ul id="boundaryList"></ul>
-          </details>
+          <div class="rest-pass" id="restPass">
+            <span class="rest-icon" aria-hidden="true">◐</span>
+            <div>
+              <strong>主动休息券尚未获得</strong>
+              <p>前六天完成 3 个间隔训练日后获得；漏一天不会清零。</p>
+            </div>
+          </div>
         </section>
 
         <section class="view" id="mapView" data-title="勇气地图">
-          <section class="section-block achievement-priority" aria-labelledby="achievementHeading">
-            <div class="section-heading">
-              <div>
-                <p class="eyebrow">先看已经拿到的里程碑</p>
-                <h2 id="achievementHeading">成就徽章</h2>
-              </div>
-              <span id="achievementCount">0 / 15</span>
-            </div>
-            <div class="achievement-grid" id="achievementGrid"></div>
-          </section>
-
           <section class="map-intro">
             <h2>每次行动，为内心世界点一盏灯</h2>
             <p>这是一张象征性的成长地图。区域代表能力，而不是你在哪里遇见了谁。</p>
@@ -204,6 +187,17 @@
             </div>
           </div>
 
+          <section class="section-block achievement-priority" aria-labelledby="achievementHeading">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">先看已经拿到的里程碑</p>
+                <h2 id="achievementHeading">成就徽章</h2>
+              </div>
+              <span id="achievementCount">0 / 15</span>
+            </div>
+            <div class="achievement-grid" id="achievementGrid"></div>
+          </section>
+
           <section class="section-block" aria-labelledby="titleRoadHeading">
             <div class="section-heading">
               <div>
@@ -237,50 +231,9 @@
             <p id="ledgerActionSummary">还没有行动入账。第一笔会从真实出手开始。</p>
           </section>
 
-          <section class="section-block ledger-overview" aria-labelledby="expenseHeading">
-            <div class="section-heading">
-              <div>
-                <p class="eyebrow">本周正反馈</p>
-                <h2 id="expenseHeading">行动积累 × 吃饭外开销</h2>
-              </div>
-            </div>
-            <div class="fund-ledger-summary">
-              <div class="fund-stat">
-                <span>本周行动积累</span>
-                <strong id="fundWeekEarned">¥0.00</strong>
-              </div>
-              <div class="fund-stat">
-                <span>本周吃饭外开销</span>
-                <strong id="expenseTotal">¥0.00</strong>
-              </div>
-              <div class="fund-stat balance" id="fundWeekBalanceCard">
-                <span>本周净额</span>
-                <strong id="fundWeekBalance">¥0.00</strong>
-              </div>
-              <p id="fundLifetimeText">累计行动积累与真实开销会在这里对抵。</p>
-            </div>
-            <div class="lifetime-ledger-stats">
-              <div><span>累计出手</span><strong><b id="ledgerActionCount">0</b> 次</strong></div>
-              <div><span>累计行动积累</span><strong id="fundLifetimeEarned">¥0.00</strong></div>
-              <div><span>累计吃饭外开销</span><strong id="expenseLifetimeTotal">¥0.00</strong></div>
-            </div>
-            <p class="fund-rule-note">这是你为勇气设置的奖赏预算，不代表从任何人身上“赚到钱”；拒绝后自然离开同样入账，也不会形成欠债或惩罚。</p>
-          </section>
-
-          <section class="section-block" aria-labelledby="incomeHeading">
-            <div class="section-heading">
-              <div>
-                <p class="eyebrow">每一笔都来自真实行动</p>
-                <h2 id="incomeHeading">最近勇气入账</h2>
-              </div>
-            </div>
-            <div class="fund-income-list" id="fundIncomeList"></div>
-          </section>
-
           <section class="section-block" aria-labelledby="expenseFormHeading">
             <div class="section-heading">
               <div>
-                <p class="eyebrow">不把开销藏起来</p>
                 <h2 id="expenseFormHeading">记录吃饭以外的真实开销</h2>
               </div>
             </div>
@@ -307,6 +260,39 @@
             </form>
             <div class="expense-list" id="expenseList"></div>
           </section>
+
+          <section class="section-block ledger-overview" aria-labelledby="expenseHeading">
+            <div class="section-heading">
+              <div>
+                <h2 id="expenseHeading">本周行动积累 - 非日常开销</h2>
+              </div>
+            </div>
+            <div class="fund-ledger-summary">
+              <div class="fund-stat">
+                <span>本周行动积累</span>
+                <strong id="fundWeekEarned">¥0.00</strong>
+              </div>
+              <div class="fund-stat">
+                <span>本周吃饭外开销</span>
+                <strong id="expenseTotal">¥0.00</strong>
+              </div>
+              <div class="fund-stat balance" id="fundWeekBalanceCard">
+                <span>本周净额</span>
+                <strong id="fundWeekBalance">¥0.00</strong>
+              </div>
+            </div>
+            <div class="lifetime-ledger-stats">
+              <div><span>累计出手</span><strong><b id="ledgerActionCount">0</b> 次</strong></div>
+              <div><span>累计行动积累</span><strong id="fundLifetimeEarned">¥0.00</strong></div>
+              <div><span>累计吃饭外开销</span><strong id="expenseLifetimeTotal">¥0.00</strong></div>
+            </div>
+            <p class="fund-rule-note">这是你为勇气设置的奖赏预算，拒绝后自然离开同样入账，也不会形成欠债或惩罚。</p>
+          </section>
+
+          <section class="section-block" id="fundIncomeSection" aria-label="最近勇气入账">
+            <div class="fund-income-list" id="fundIncomeList"></div>
+          </section>
+
         </section>
 
         <section class="view" id="reviewView" data-title="本周复盘">
@@ -326,18 +312,6 @@
             </div>
             <div class="attempt-trend-chart" id="attemptTrendChart"></div>
             <p class="form-hint">每次真实主动交流或礼貌退出，曲线向上一级；不比较速度，不设置失败线。</p>
-          </section>
-
-          <section class="section-block" aria-labelledby="deferReasonHeading">
-            <div class="section-heading">
-              <div>
-                <p class="eyebrow">天气与现实安排</p>
-                <h2 id="deferReasonHeading">本周顺延原因</h2>
-              </div>
-              <span id="deferralCount">0 次顺延</span>
-            </div>
-            <div class="reason-chart" id="deferralReasonChart"></div>
-            <div class="deferral-list" id="deferralList"></div>
           </section>
 
           <section class="section-block" aria-labelledby="reasonHeading">
@@ -396,14 +370,14 @@
         <button class="nav-item" type="button" data-view="ledgerView" data-label="勇气账本">
           <span aria-hidden="true">¥</span><em>账本</em>
         </button>
+        <button class="nav-item" type="button" data-view="reviewView" data-label="本周复盘">
+          <span aria-hidden="true">⌁</span><em>复盘</em>
+        </button>
         <button class="nav-item" type="button" data-view="mapView" data-label="勇气地图">
           <span aria-hidden="true">◇</span><em>地图</em>
         </button>
         <button class="nav-item" type="button" data-view="cardsView" data-label="勇气卡册">
           <span aria-hidden="true">▣</span><em>卡册</em>
-        </button>
-        <button class="nav-item" type="button" data-view="reviewView" data-label="本周复盘">
-          <span aria-hidden="true">⌁</span><em>复盘</em>
         </button>
       </nav>
     </div>

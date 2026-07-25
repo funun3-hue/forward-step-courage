@@ -357,10 +357,9 @@ function isRewardClaimed() {
 
 function renderToday() {
   const weekLogs = currentWeekLogs();
-  const activeDays = trainingDayKeys(weekLogs);
+  const deferrals = currentWeekDeferrals();
   const completeDays = fullTrainingDayKeys(weekLogs);
   const counts = actionCountsByDay(weekLogs);
-  const deferrals = currentWeekDeferrals();
   const todayLogs = state.logs.filter((log) => dateKey(new Date(log.createdAt)) === dateKey());
   const todayActions = actionLogs(todayLogs).length;
   const target = Number(state.settings.weeklyTarget);
@@ -372,8 +371,6 @@ function renderToday() {
   const weekExpense = currentWeekItems(state.expenses).reduce((sum, item) => sum + Number(item.amount || 0), 0);
   const weekBalance = weekFund - weekExpense;
 
-  el("boundaryList").innerHTML = BOUNDARY_CHECKS.map((item) => `<li>${escapeHtml(item)}</li>`).join("");
-
   el("levelName").textContent = currentTitle().name;
   el("totalPoints").textContent = state.points;
   el("heroFundTotal").textContent = formatMoney(courageFundTotal());
@@ -381,11 +378,6 @@ function renderToday() {
   el("homeWeekFund").textContent = formatMoney(weekFund);
   el("homeWeekBalance").textContent = formatMoney(weekBalance, true);
   el("homeWeekBalance").classList.toggle("negative", weekBalance < 0);
-  el("homeMomentumMessage").textContent = weekActions.length
-    ? weekBalance >= 0
-      ? `本周 ${weekActions.length} 次真实出手已经留下 ${formatMoney(weekFund)}；下一次会继续同时推进训练和储备。`
-      : `本周行动已经真实积累 ${formatMoney(weekFund)}；开销只是对照，不会把勇气记成欠债。`
-    : "第一次行动会同时点亮训练进度和勇气储备。";
   el("todayAttempts").textContent = todayActions;
   el("todayLimit").textContent = ` / ${dailyLimit}`;
   el("trainingStatus").textContent = targetMet ? "本周4个完整训练日已完成" : `本周 ${completeDays.length} / ${target} 个完整训练日`;
@@ -409,21 +401,6 @@ function renderToday() {
       </div>`;
     })
     .join("");
-
-  const weekStatus = el("weekStatusBanner");
-  weekStatus.className = "week-status-banner";
-  if (targetMet) {
-    weekStatus.classList.add("complete");
-    weekStatus.textContent = `绿色完成：本周已有 ${completeDays.length} 个完整训练日，每天都完成了 ${dailyLimit} 次实际接近。`;
-  } else if (deferrals.length) {
-    weekStatus.classList.add("deferred");
-    weekStatus.textContent = `黄色顺延：本周已有 ${deferrals.length} 次现实调整，还差 ${target - completeDays.length} 个完整训练日。延期不等于失败。`;
-  } else if (activeDays.length) {
-    weekStatus.classList.add("progress");
-    weekStatus.textContent = `蓝色进展：你已经在 ${activeDays.length} 天采取了行动；未满 ${dailyLimit} 次的日子也保留真实进度。`;
-  } else {
-    weekStatus.textContent = "灰色待开始：白天偶遇和晚间专门练习都会计入，选择适合的机会即可。";
-  }
 
   const deferButton = el("deferButton");
   if (todayActions >= dailyLimit) {
@@ -508,8 +485,8 @@ function renderMap() {
     { icon: "Ⅱ", name: "双人组·初次", detail: "第一次向有 1 位同行者的目标开口", progress: pairedActions.length, target: 1 },
     { icon: "Ⅱ", name: "双人组·三次", detail: "完成 3 次双人组主动交流", progress: pairedActions.length, target: 3 },
     { icon: "Ⅱ", name: "双人组·五次", detail: "完成 5 次双人组主动交流", progress: pairedActions.length, target: 5 },
-    { icon: "♂", name: "旁人目光·初次", detail: "第一次向含男性同行者的组合开口", progress: includesManActions.length, target: 1 },
-    { icon: "♂", name: "旁人目光·三次", detail: "完成 3 次含男性同行者的组合交流", progress: includesManActions.length, target: 3 },
+    { icon: "♂", name: "男凝目光·初次", detail: "第一次向含男性同行者的组合开口", progress: includesManActions.length, target: 1 },
+    { icon: "♂", name: "男凝目光·三次", detail: "完成 3 次含男性同行者的组合交流", progress: includesManActions.length, target: 3 },
     { icon: "Ⅲ", name: "三人组·初次", detail: "第一次向三人及以上组合开口", progress: groupActions.length, target: 1 },
     { icon: "Ⅲ", name: "三人组·三次", detail: "完成 3 次三人及以上组合交流", progress: groupActions.length, target: 3 },
     { icon: "Ⅲ", name: "三人组·十次", detail: "完成 10 次三人及以上组合交流", progress: groupActions.length, target: 10 }
@@ -708,7 +685,6 @@ function renderAttemptTrend(actions) {
 
 function renderReview() {
   const logs = currentWeekLogs();
-  const deferrals = currentWeekDeferrals();
   const actions = actionLogs(logs);
   const exits = logs.filter((log) => log.kind === "graceful_exit");
   const avoidances = logs.filter((log) => log.kind === "avoided");
@@ -718,31 +694,7 @@ function renderReview() {
   el("reviewActions").textContent = actions.length;
   el("reviewExits").textContent = exits.length;
   el("avoidanceCount").textContent = `${avoidances.length} 次回避`;
-  el("deferralCount").textContent = `${deferrals.length} 次顺延`;
   renderAttemptTrend(actions);
-
-  const deferralCounts = deferrals.reduce((counts, item) => {
-    counts[item.reason] = (counts[item.reason] || 0) + 1;
-    return counts;
-  }, {});
-  const sortedDeferrals = Object.entries(deferralCounts).sort((a, b) => b[1] - a[1]);
-  const maxDeferral = sortedDeferrals[0]?.[1] || 1;
-  el("deferralReasonChart").innerHTML = sortedDeferrals.length
-    ? sortedDeferrals.map(([key, count]) => `
-        <div class="reason-row">
-          <span>${escapeHtml(DEFERRAL_REASONS[key]?.label || DEFERRAL_REASONS.other.label)}</span>
-          <span class="reason-bar"><i style="width:${(count / maxDeferral) * 100}%"></i></span>
-          <strong>${count}</strong>
-        </div>`).join("")
-    : `<div class="empty-state">本周还没有顺延记录。下雨、临时有事或状态不佳时，可以如实调整一天。</div>`;
-  el("deferralList").innerHTML = deferrals.length
-    ? [...deferrals].reverse().map((item) => `
-        <article class="deferral-item">
-          <i aria-hidden="true">${DEFERRAL_REASONS[item.reason]?.icon || "＋"}</i>
-          <div><strong>${escapeHtml(DEFERRAL_REASONS[item.reason]?.label || "其他原因")}</strong><small>${escapeHtml(item.detail || "顺延一天，不扣分")}</small></div>
-          <span>${escapeHtml(formatShortDate(item.fromDate))} → ${escapeHtml(formatShortDate(item.toDate))}</span>
-        </article>`).join("")
-    : "";
 
   const reasonCounts = {};
   avoidances.forEach((log) => {
@@ -775,7 +727,7 @@ function renderReview() {
   el("contextCount").textContent = `${actions.length} 次记录`;
   el("contextChart").innerHTML = sortedContexts.length
     ? sortedContexts.map(([context, count]) => `
-        <div class="reason-row">
+        <div class="reason-row context-row">
           <span>${escapeHtml(context)}</span>
           <span class="reason-bar"><i style="width:${(count / maxContext) * 100}%"></i></span>
           <strong>${count}</strong>
@@ -842,21 +794,19 @@ function renderExpenses() {
   el("ledgerActionSummary").textContent = lifetimeActions
     ? `${lifetimeActions} 次真实出手，已经留下 ${formatMoney(lifetimeFund)} 行动积累。`
     : "还没有行动入账。第一笔会从真实出手开始。";
-  el("fundLifetimeText").textContent = lifetimeBalance >= 0
-    ? `累计行动积累 ${formatMoney(lifetimeFund)}，累计吃饭外开销 ${formatMoney(lifetimeExpense)}；目前还有 ${formatMoney(lifetimeBalance)} 勇气预算。`
-    : `累计行动积累 ${formatMoney(lifetimeFund)}，累计吃饭外开销 ${formatMoney(lifetimeExpense)}；开销高出 ${formatMoney(Math.abs(lifetimeBalance))}，不记为欠债。`;
   el("expenseList").innerHTML = expenses.length
     ? [...expenses].reverse().map((item) => `
         <article class="expense-item">
           <div><strong>${escapeHtml(item.category)}</strong><small>${escapeHtml(item.note || "无备注")}</small></div>
           <span>¥${Number(item.amount).toFixed(2)} · ${escapeHtml(formatShortDate(item.createdAt))}</span>
         </article>`).join("")
-    : `<div class="empty-state">尚未记录吃饭以外的开销。正结余只有在真正用于奖赏时才会成为现实激励。</div>`;
+    : "";
 
   const incomeLogs = [...actionLogs()]
     .filter((log) => Number(log.fundAmount) > 0)
     .reverse()
     .slice(0, 10);
+  el("fundIncomeSection").hidden = incomeLogs.length === 0;
   el("fundIncomeList").innerHTML = incomeLogs.length
     ? incomeLogs.map((log) => {
         const group = COURAGE_FUND_GROUPS[log.fundGroup] || "同行情况未记录";
@@ -869,7 +819,7 @@ function renderExpenses() {
           <span>+${formatMoney(log.fundAmount)}</span>
         </article>`;
       }).join("")
-    : `<div class="empty-state">完成一次真实主动交流或礼貌退出后，第一笔勇气入账会出现在这里。</div>`;
+    : "";
 }
 
 function renderAll() {
