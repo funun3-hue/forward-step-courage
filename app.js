@@ -629,13 +629,7 @@ function renderAttemptTrend(actions) {
 function renderReview() {
   const logs = currentWeekLogs();
   const actions = actionLogs(logs);
-  const exits = logs.filter((log) => log.kind === "graceful_exit");
   const avoidances = logs.filter((log) => log.kind === "avoided");
-  const days = rejectionDayKeys(logs);
-
-  el("reviewDays").textContent = days.length;
-  el("reviewActions").textContent = actions.length;
-  el("reviewExits").textContent = exits.length;
   el("avoidanceCount").textContent = `${avoidances.length} 次回避`;
   renderAttemptTrend(actions);
 
@@ -714,26 +708,20 @@ function renderReview() {
 }
 
 function renderExpenses() {
-  const expenses = currentWeekItems(state.expenses);
-  const weekFund = courageFundTotal(currentWeekLogs());
-  const weekExpense = expenses.reduce((sum, item) => sum + Number(item.amount || 0), 0);
-  const weekBalance = weekFund - weekExpense;
+  const expenses = state.expenses;
   const lifetimeFund = courageFundTotal();
   const lifetimeExpense = state.expenses.reduce((sum, item) => sum + Number(item.amount || 0), 0);
   const lifetimeBalance = lifetimeFund - lifetimeExpense;
   const lifetimeActions = actionLogs().length;
 
-  el("fundWeekEarned").textContent = formatMoney(weekFund);
-  el("expenseTotal").textContent = formatMoney(weekExpense);
-  el("fundWeekBalance").textContent = formatMoney(weekBalance, true);
+  el("fundWeekEarned").textContent = formatMoney(lifetimeFund);
+  el("expenseTotal").textContent = formatMoney(lifetimeExpense);
+  el("fundWeekBalance").textContent = formatMoney(lifetimeBalance, true);
   el("fundBalanceTotal").textContent = formatMoney(lifetimeBalance, true);
-  el("fundWeekBalanceCard").classList.toggle("positive", weekBalance > 0);
-  el("fundWeekBalanceCard").classList.toggle("negative", weekBalance < 0);
+  el("fundWeekBalanceCard").classList.toggle("positive", lifetimeBalance > 0);
+  el("fundWeekBalanceCard").classList.toggle("negative", lifetimeBalance < 0);
   el("fundBalanceTotal").classList.toggle("positive", lifetimeBalance > 0);
   el("fundBalanceTotal").classList.toggle("negative", lifetimeBalance < 0);
-  el("ledgerActionCount").textContent = lifetimeActions;
-  el("fundLifetimeEarned").textContent = formatMoney(lifetimeFund);
-  el("expenseLifetimeTotal").textContent = formatMoney(lifetimeExpense);
   el("ledgerActionSummary").textContent = lifetimeActions
     ? `${lifetimeActions} 次真实出手，已经留下 ${formatMoney(lifetimeFund)} 行动积累。`
     : "还没有行动入账。第一笔会从真实出手开始。";

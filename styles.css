@@ -261,7 +261,8 @@ summary:focus-visible {
 
 .today-label b {
   color: var(--gold);
-  font-size: 0.76rem;
+  font-size: 1.02rem;
+  line-height: 1.2;
 }
 
 .primary-action,
@@ -1475,9 +1476,13 @@ summary:focus-visible {
 
 .fund-ledger-summary {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 9px;
   margin: 16px 0 10px;
+}
+
+.fund-stat-primary {
+  grid-column: 1 / -1;
 }
 
 .fund-stat {
@@ -1514,16 +1519,8 @@ summary:focus-visible {
   color: var(--muted);
 }
 
-.fund-ledger-summary > p {
-  grid-column: 1 / -1;
-  margin: 2px 2px 0;
-  color: var(--text);
-  font-size: 0.7rem;
-  line-height: 1.55;
-}
-
 .fund-rule-note {
-  margin: 0 0 16px;
+  margin: 11px 0 0;
   padding: 12px 13px;
   border-left: 3px solid var(--mint);
   border-radius: 0 12px 12px 0;
