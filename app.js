@@ -80,8 +80,8 @@ const REASON_GROUPS = {
 };
 
 const OUTCOME_LABELS = {
-  completed: "完成了主动交流",
-  graceful_exit: "对方没兴趣，我自然退出",
+  completed: "对方愿意继续交流",
+  graceful_exit: "被拒绝了，我自然离开",
   unsuitable: "判断不适合打扰",
   avoided: "我回避了"
 };
@@ -114,14 +114,6 @@ const BOUNDARY_CHECKS = [
   "女生神情抗拒地回避或拒绝时，微笑着说谢谢并且离场。"
 ];
 
-const DEFERRAL_REASONS = {
-  rain: { label: "当晚有雨", icon: "☂" },
-  busy: { label: "当晚有事", icon: "⌚" },
-  energy: { label: "身体状态不佳", icon: "◐" },
-  setting: { label: "场地或时机不合适", icon: "◇" },
-  other: { label: "其他原因", icon: "＋" }
-};
-
 const CONTEXTS = [
   "商场",
   "街道",
@@ -139,13 +131,14 @@ const CONTEXTS = [
   "其他"
 ];
 const WEEKDAY_NAMES = ["一", "二", "三", "四", "五", "六", "日"];
+const DAILY_REJECTION_GOAL = 1;
+const GOLD_REJECTION_GOAL = 5;
+const WEEKLY_REJECTION_DAYS = 7;
 
 const defaultState = {
-  version: 4,
+  version: 5,
   points: 0,
   settings: {
-    weeklyTarget: 4,
-    dailyLimit: 5,
     ladderLevel: 3,
     rewardLabel: "看一场一直想看的电影",
     rewardAmount: 0
@@ -161,7 +154,6 @@ let state = loadState();
 let installPrompt = null;
 let toastTimer = null;
 let trainingFlow = null;
-let selectedDeferralReason = "";
 
 const el = (id) => document.getElementById(id);
 
@@ -179,11 +171,7 @@ function loadState() {
       deferrals: Array.isArray(saved.deferrals) ? saved.deferrals : [],
       rewardClaims: Array.isArray(saved.rewardClaims) ? saved.rewardClaims : []
     };
-    if (Number(saved.version || 1) < 2) {
-      migrated.settings.weeklyTarget = 4;
-      migrated.settings.dailyLimit = 5;
-    }
-    migrated.version = 4;
+    migrated.version = 5;
     return migrated;
   } catch (error) {
     console.warn("无法读取本地数据，已使用默认设置。", error);
@@ -242,12 +230,12 @@ function currentWeekLogs() {
   return currentWeekItems(state.logs);
 }
 
-function currentWeekDeferrals() {
-  return currentWeekItems(state.deferrals);
-}
-
 function actionLogs(logs = state.logs) {
   return logs.filter((log) => log.kind === "completed" || log.kind === "graceful_exit");
+}
+
+function rejectionLogs(logs = state.logs) {
+  return logs.filter((log) => log.kind === "graceful_exit");
 }
 
 function courageFundAmount(level = "everyday", group = "solo") {
@@ -264,22 +252,17 @@ function formatMoney(value, signed = false) {
   return `${amount > 0 ? "+" : "-"}¥${Math.abs(amount).toFixed(2)}`;
 }
 
-function trainingDayKeys(logs = currentWeekLogs()) {
-  return [...new Set(actionLogs(logs).map((log) => dateKey(new Date(log.createdAt))))];
-}
-
-function actionCountsByDay(logs = currentWeekLogs()) {
-  return actionLogs(logs).reduce((counts, log) => {
+function rejectionCountsByDay(logs = currentWeekLogs()) {
+  return rejectionLogs(logs).reduce((counts, log) => {
     const key = dateKey(new Date(log.createdAt));
     counts[key] = (counts[key] || 0) + 1;
     return counts;
   }, {});
 }
 
-function fullTrainingDayKeys(logs = currentWeekLogs()) {
-  const limit = Number(state.settings.dailyLimit);
-  return Object.entries(actionCountsByDay(logs))
-    .filter(([, count]) => count >= limit)
+function rejectionDayKeys(logs = currentWeekLogs()) {
+  return Object.entries(rejectionCountsByDay(logs))
+    .filter(([, count]) => count >= DAILY_REJECTION_GOAL)
     .map(([key]) => key);
 }
 
@@ -334,38 +317,17 @@ function getWeekDays() {
   });
 }
 
-function hasSpacedThreeDays() {
-  const doneKeys = trainingDayKeys();
-  const dayIndexes = getWeekDays()
-    .slice(0, 6)
-    .map((date, index) => (doneKeys.includes(dateKey(date)) ? index : -1))
-    .filter((index) => index >= 0);
-
-  for (let a = 0; a < dayIndexes.length; a += 1) {
-    for (let b = a + 1; b < dayIndexes.length; b += 1) {
-      for (let c = b + 1; c < dayIndexes.length; c += 1) {
-        if (dayIndexes[b] - dayIndexes[a] >= 2 && dayIndexes[c] - dayIndexes[b] >= 2) return true;
-      }
-    }
-  }
-  return false;
-}
-
 function isRewardClaimed() {
   return state.rewardClaims.some((claim) => claim.week === weekKey());
 }
 
 function renderToday() {
   const weekLogs = currentWeekLogs();
-  const deferrals = currentWeekDeferrals();
-  const completeDays = fullTrainingDayKeys(weekLogs);
-  const counts = actionCountsByDay(weekLogs);
+  const rejectionDays = rejectionDayKeys(weekLogs);
+  const rejectionCounts = rejectionCountsByDay(weekLogs);
   const todayLogs = state.logs.filter((log) => dateKey(new Date(log.createdAt)) === dateKey());
-  const todayActions = actionLogs(todayLogs).length;
-  const target = Number(state.settings.weeklyTarget);
-  const dailyLimit = Number(state.settings.dailyLimit);
-  const targetMet = completeDays.length >= target;
-  const todayDeferral = deferrals.find((item) => item.fromDate === dateKey());
+  const todayRejections = rejectionLogs(todayLogs).length;
+  const targetMet = rejectionDays.length >= WEEKLY_REJECTION_DAYS;
   const weekActions = actionLogs(weekLogs);
   const weekFund = courageFundTotal(weekLogs);
   const weekExpense = currentWeekItems(state.expenses).reduce((sum, item) => sum + Number(item.amount || 0), 0);
@@ -378,23 +340,26 @@ function renderToday() {
   el("homeWeekFund").textContent = formatMoney(weekFund);
   el("homeWeekBalance").textContent = formatMoney(weekBalance, true);
   el("homeWeekBalance").classList.toggle("negative", weekBalance < 0);
-  el("todayAttempts").textContent = todayActions;
-  el("todayLimit").textContent = ` / ${dailyLimit}`;
-  el("trainingStatus").textContent = targetMet ? "本周4个完整训练日已完成" : `本周 ${completeDays.length} / ${target} 个完整训练日`;
-  el("weekProgressText").textContent = `${completeDays.length} / ${target} 个完整训练日`;
-  el("startButton").innerHTML = todayActions >= dailyLimit
-    ? "<span aria-hidden=\"true\">＋</span> 本日目标已完成 · 自愿记录"
+  el("todayAttempts").textContent = todayRejections;
+  el("todayLimit").textContent = ` / ${DAILY_REJECTION_GOAL}`;
+  el("trainingStatus").textContent = todayRejections >= GOLD_REJECTION_GOAL
+    ? "今日 5 次拒绝 · 金光已点亮"
+    : todayRejections >= DAILY_REJECTION_GOAL
+      ? "今日拒绝目标已完成"
+      : `本周 ${rejectionDays.length} / ${WEEKLY_REJECTION_DAYS} 个拒绝目标日`;
+  el("weekProgressText").textContent = `${rejectionDays.length} / ${WEEKLY_REJECTION_DAYS} 天获得拒绝`;
+  el("startButton").innerHTML = todayRejections >= DAILY_REJECTION_GOAL
+    ? "<span aria-hidden=\"true\">＋</span> 今日已点亮 · 仍可自然行动"
     : "<span aria-hidden=\"true\">➜</span> 注意到一个合适机会";
 
   el("weekStrip").innerHTML = getWeekDays()
     .map((date, index) => {
       const key = dateKey(date);
-      const count = counts[key] || 0;
-      const deferred = deferrals.some((item) => item.fromDate === key);
-      const status = count >= dailyLimit ? "complete" : deferred ? "deferred" : count > 0 ? "progress" : "neutral";
+      const count = rejectionCounts[key] || 0;
+      const status = count >= GOLD_REJECTION_GOAL ? "gold" : count >= DAILY_REJECTION_GOAL ? "rejected" : "neutral";
       const today = key === dateKey();
-      const mark = status === "complete" ? "✓" : status === "progress" ? `${count}/${dailyLimit}` : status === "deferred" ? (count ? `${count}↷` : "↷") : date.getDate();
-      const label = status === "complete" ? `完成${dailyLimit}次接近` : status === "progress" ? `已完成${count}次接近` : status === "deferred" ? `${count ? `已完成${count}次并` : ""}顺延` : "休息或未安排";
+      const mark = status === "gold" ? `✦${count}` : status === "rejected" ? `${count}拒` : date.getDate();
+      const label = status === "gold" ? `获得${count}次拒绝，金光已点亮` : status === "rejected" ? `获得${count}次拒绝，今日已点亮` : "尚未记录拒绝";
       return `<div class="day-dot ${status}${today ? " today" : ""}" aria-label="周${WEEKDAY_NAMES[index]}：${label}">
         <span>周${WEEKDAY_NAMES[index]}</span>
         <i>${mark}</i>
@@ -402,39 +367,17 @@ function renderToday() {
     })
     .join("");
 
-  const deferButton = el("deferButton");
-  if (todayActions >= dailyLimit) {
-    deferButton.disabled = true;
-    deferButton.innerHTML = "<span aria-hidden=\"true\">✓</span> 今日已完成，无需顺延";
-  } else if (todayDeferral) {
-    deferButton.disabled = true;
-    deferButton.innerHTML = `<span aria-hidden="true">↷</span> 已因“${escapeHtml(DEFERRAL_REASONS[todayDeferral.reason]?.label || "其他原因")}”顺延到明天`;
-  } else if (targetMet) {
-    deferButton.disabled = true;
-    deferButton.innerHTML = "<span aria-hidden=\"true\">✓</span> 本周目标已经完成";
-  } else {
-    deferButton.disabled = false;
-    deferButton.innerHTML = "<span aria-hidden=\"true\">↷</span> 今晚无法完成，顺延一天";
-  }
-
-  const restPass = el("restPass");
-  const restEarned = hasSpacedThreeDays();
-  restPass.classList.toggle("earned", restEarned);
-  restPass.innerHTML = restEarned
-    ? `<span class="rest-icon" aria-hidden="true">◐</span><div><strong>主动休息券已获得</strong><p>你完成了 3 个间隔训练日。休息不会破坏进度，也不用补签。</p></div>`
-    : `<span class="rest-icon" aria-hidden="true">◐</span><div><strong>主动休息券尚未获得</strong><p>前六天完成 3 个间隔训练日后获得；漏一天不会清零。</p></div>`;
-
   const rewardClaimed = isRewardClaimed();
   el("rewardLabel").textContent = state.settings.rewardLabel;
   el("rewardValue").textContent = Number(state.settings.rewardAmount) > 0
     ? `真实预算 ¥${Number(state.settings.rewardAmount).toFixed(0)} · 不计算虚构省钱`
     : "时间型奖赏 · 真实兑现";
-  el("rewardProgress").style.width = `${Math.min(100, (completeDays.length / target) * 100)}%`;
+  el("rewardProgress").style.width = `${Math.min(100, (rejectionDays.length / WEEKLY_REJECTION_DAYS) * 100)}%`;
   el("rewardState").textContent = rewardClaimed
     ? "本周已经兑现"
     : targetMet
       ? "已解锁，可以兑现"
-      : `完成 ${target} 个完整训练日后兑现`;
+      : `本周 ${WEEKLY_REJECTION_DAYS} 天都获得一次拒绝后兑现`;
   el("claimRewardButton").classList.toggle("hidden", !targetMet || rewardClaimed);
 }
 
@@ -473,11 +416,11 @@ function renderMap() {
   const includesManActions = allActions.filter((log) => log.fundGroup !== "solo" && log.groupComposition === "includes_man");
   const boundaryCount = allLogs.filter((log) => log.kind === "graceful_exit" || log.kind === "unsuitable").length;
   const hasHighAnxietyAction = allActions.some((log) => Number(log.anxietyBefore) >= 7);
-  const spacedDayProgress = Math.min(trainingDayKeys().length, 3);
+  const rejectionDayProgress = Math.min(rejectionDayKeys().length, 3);
   const achievements = [
     { icon: "✦", name: "初次启程", detail: "获得第一张真实行动卡", progress: state.cards.length, target: 1 },
     { icon: "♢", name: "迎着心跳", detail: "焦虑达到 7 分仍完成行动", progress: hasHighAnxietyAction ? 1 : 0, target: 1 },
-    { icon: "◐", name: "三日远征", detail: "一周完成 3 个间隔训练日", progress: spacedDayProgress, target: 3, unlocked: hasSpacedThreeDays() },
+    { icon: "◐", name: "三日破惧", detail: "一周有 3 天获得至少一次拒绝", progress: rejectionDayProgress, target: 3 },
     { icon: "⌁", name: "边界守护者", detail: "累计 5 次礼貌退出或不打扰", progress: boundaryCount, target: 5 },
     { icon: "¥", name: "第一枚勇气币", detail: "第一次把真实行动变成勇气预算", progress: courageFundTotal() > 0 ? 1 : 0, target: 1 },
     { icon: "十", name: "稳定出手", detail: "累计完成 10 次尊重边界的接近", progress: allActions.length, target: 10 },
@@ -688,7 +631,7 @@ function renderReview() {
   const actions = actionLogs(logs);
   const exits = logs.filter((log) => log.kind === "graceful_exit");
   const avoidances = logs.filter((log) => log.kind === "avoided");
-  const days = fullTrainingDayKeys(logs);
+  const days = rejectionDayKeys(logs);
 
   el("reviewDays").textContent = days.length;
   el("reviewActions").textContent = actions.length;
@@ -835,7 +778,6 @@ function contextOptions(selected = "商场") {
 }
 
 function openTrainingDialog() {
-  const todayActions = actionLogs(state.logs.filter((log) => dateKey(new Date(log.createdAt)) === dateKey())).length;
   trainingFlow = {
     stage: "safety",
     safetyIndex: 0,
@@ -852,8 +794,7 @@ function openTrainingDialog() {
     fundGroup: "solo",
     groupComposition: "unspecified",
     reasonCategory: "",
-    reasonText: "",
-    beyondLimit: todayActions >= Number(state.settings.dailyLimit)
+    reasonText: ""
   };
   renderTrainingDialog();
   el("trainingDialog").showModal();
@@ -876,7 +817,6 @@ function renderTrainingDialog() {
           </div>
           <h2>先确认这是一个合适机会</h2>
           <p class="dialog-lead">一次只判断一件事。能识别边界，本身就是社交能力。</p>
-          ${trainingFlow.beyondLimit ? `<div class="if-then-plan"><span>本日 ${state.settings.dailyLimit} 次实际接近已完成</span><p>你可以自愿记录额外行动，但今天不再增加勇气值，不必继续搜寻目标。</p></div>` : ""}
           <div class="single-safety-check" aria-live="polite">
             <span>边界 ${safetyIndex + 1}</span>
             <p class="safety-check-copy">${escapeHtml(BOUNDARY_CHECKS[safetyIndex])}</p>
@@ -914,7 +854,7 @@ function renderTrainingDialog() {
         <div class="minimum-action"><span>今天的最小动作</span><strong>${escapeHtml(ladder.action)}</strong></div>
         <div class="fund-action-cue">
           <span>完成后再记录心动程度与同行人数</span>
-          <strong>${trainingFlow.beyondLimit ? "今日已满 · 仍可记录" : "¥0.05–¥10.50"}</strong>
+          <strong>¥0.05–¥10.50</strong>
           <p>现在只做最小动作，不在出手前计算档位。</p>
         </div>
         <div class="launch-plan"><span>如果环境合适，而且我开始反复预测拒绝</span><strong>那么我先迈出一步，再允许焦虑跟上来。</strong></div>
@@ -942,8 +882,8 @@ function renderTrainingDialog() {
         <p class="eyebrow">不评判结果</p>
         <h2>刚才发生了什么？</h2>
         <div class="outcome-grid">
-          <button class="outcome-button" type="button" data-outcome="completed"><strong>完成了主动交流</strong><span>不记录是否拿到联系方式</span></button>
-          <button class="outcome-button" type="button" data-outcome="graceful_exit"><strong>对方没兴趣，我自然退出</strong><span>这是一次完整而有边界的训练</span></button>
+          <button class="outcome-button" type="button" data-outcome="completed"><strong>对方愿意继续交流</strong><span>这仍是一笔真实出手记录</span></button>
+          <button class="outcome-button" type="button" data-outcome="graceful_exit"><strong>被拒绝了，我自然离开</strong><span>增加今日拒绝计数，完成暴露训练</span></button>
         </div>
       </div>`;
     content.querySelectorAll("[data-outcome]").forEach((button) => {
@@ -958,7 +898,7 @@ function renderTrainingDialog() {
   }
 
   if (trainingFlow.stage === "action-detail") {
-    const fundAmount = trainingFlow.beyondLimit ? 0 : courageFundAmount(trainingFlow.fundLevel, trainingFlow.fundGroup);
+    const fundAmount = courageFundAmount(trainingFlow.fundLevel, trainingFlow.fundGroup);
     content.innerHTML = `
       <form class="dialog-step" id="actionDetailForm">
         <p class="eyebrow">生成一张新勇气卡</p>
@@ -966,7 +906,7 @@ function renderTrainingDialog() {
         <div class="fund-config">
           <div class="fund-config-heading">
             <span>事后记录本次挑战档位</span>
-            <strong id="fundPreview" aria-live="polite">${fundAmount ? `+${formatMoney(fundAmount)}` : "今日已满，不再累计"}</strong>
+            <strong id="fundPreview" aria-live="polite">+${formatMoney(fundAmount)}</strong>
           </div>
           <div class="fund-config-grid">
             <label>
@@ -1041,8 +981,8 @@ function renderTrainingDialog() {
 
   if (trainingFlow.stage === "reward") {
     const card = trainingFlow.savedCard;
-    const todayActions = actionLogs(state.logs.filter((log) => dateKey(new Date(log.createdAt)) === dateKey())).length;
-    const dailyLimit = Number(state.settings.dailyLimit);
+    const todayLogs = state.logs.filter((log) => dateKey(new Date(log.createdAt)) === dateKey());
+    const todayRejections = rejectionLogs(todayLogs).length;
     const weekLogs = currentWeekLogs();
     const weekActions = actionLogs(weekLogs).length;
     const weekFund = courageFundTotal(weekLogs);
@@ -1050,11 +990,11 @@ function renderTrainingDialog() {
     const weekBalance = weekFund - weekExpense;
     content.innerHTML = `
       <div class="dialog-step">
-        <p class="eyebrow">${trainingFlow.beyondLimit ? "额外记录 · 不再累计" : `+${card.points} 勇气值 · +${formatMoney(card.fundAmount)} 储备金`}</p>
-        <h2>${trainingFlow.beyondLimit ? "今天已经足够，不必继续搜寻" : "行动完成，奖励现在就到账"}</h2>
-        <div class="fund-reward${card.fundAmount ? "" : " capped"}">
+        <p class="eyebrow">+${card.points} 勇气值 · +${formatMoney(card.fundAmount)} 储备金</p>
+        <h2>${card.kind === "graceful_exit" ? "拒绝已收到，今天更自由了一点" : "行动完成，奖励现在就到账"}</h2>
+        <div class="fund-reward">
           <span aria-hidden="true">✦</span>
-          <div><small>勇气储备金</small><strong>${card.fundAmount ? `+${formatMoney(card.fundAmount)}` : "今日已满"}</strong><p>${card.fundAmount ? "无论对方如何回应，这次尊重边界的接近都已入账。" : "超过每日目标的行动可以记录，但不会驱动继续搜寻。"}</p></div>
+          <div><small>勇气储备金</small><strong>+${formatMoney(card.fundAmount)}</strong><p>无论对方如何回应，这次尊重边界的接近都已入账。</p></div>
         </div>
         <div class="reward-reveal">
           <span class="big-symbol" aria-hidden="true">${cardSymbol(card)}</span>
@@ -1067,7 +1007,7 @@ function renderTrainingDialog() {
           <div><span>本周勇气储备</span><strong>${formatMoney(weekFund)}</strong></div>
           <div><span>当前本周净额</span><strong>${formatMoney(weekBalance, true)}</strong></div>
         </div>
-        <p class="reward-progress-copy">今日 ${Math.min(todayActions, dailyLimit)} / ${dailyLimit} 次${todayActions >= dailyLimit ? " · 已经完成，可以停止" : " · 每一次都在削弱回避的自动反应"}</p>
+        <p class="reward-progress-copy">今日拒绝 ${todayRejections} 次${todayRejections >= GOLD_REJECTION_GOAL ? " · 金光已点亮" : todayRejections >= DAILY_REJECTION_GOAL ? " · 今日目标已点亮，可以停止" : " · 真实出手已经保留，拒绝出现时会点亮今日"}</p>
         <button class="primary-action" id="rewardLedgerButton" type="button">查看刚刚入账</button>
         <button class="secondary-action" id="viewCardButton" type="button">去卡册翻开它</button>
         <button class="text-button" id="finishTrainingButton" type="button">完成本次记录</button>
@@ -1096,8 +1036,8 @@ function updateFundPreview() {
   const compositionField = el("groupCompositionField");
   compositionField?.classList.toggle("hidden", trainingFlow.fundGroup === "solo");
   if (trainingFlow.fundGroup === "solo") trainingFlow.groupComposition = "unspecified";
-  const amount = trainingFlow.beyondLimit ? 0 : courageFundAmount(trainingFlow.fundLevel, trainingFlow.fundGroup);
-  el("fundPreview").textContent = trainingFlow.beyondLimit ? "今日已满，不再累计" : `+${formatMoney(amount)}`;
+  const amount = courageFundAmount(trainingFlow.fundLevel, trainingFlow.fundGroup);
+  el("fundPreview").textContent = `+${formatMoney(amount)}`;
 }
 
 function saveSimpleLog(kind) {
@@ -1175,9 +1115,9 @@ function saveActionLog(event) {
   const after = Number(el("afterRange").value);
   const context = el("trainingContext").value;
   const note = el("trainingNote").value.trim();
-  const basePoints = trainingFlow.beyondLimit ? 0 : 3;
-  const points = basePoints + (!trainingFlow.beyondLimit && before >= 6 ? 1 : 0);
-  const fundAmount = trainingFlow.beyondLimit ? 0 : courageFundAmount(trainingFlow.fundLevel, trainingFlow.fundGroup);
+  const basePoints = 3;
+  const points = basePoints + (before >= 6 ? 1 : 0);
+  const fundAmount = courageFundAmount(trainingFlow.fundLevel, trainingFlow.fundGroup);
   const now = new Date().toISOString();
   const cardIndex = state.cards.length;
   const evidence = generateEvidence(trainingFlow.outcome, before, after);
@@ -1260,45 +1200,7 @@ function closeDialog(dialog) {
   if (dialog.open) dialog.close();
 }
 
-function openDeferralDialog() {
-  selectedDeferralReason = "";
-  document.querySelectorAll("[data-deferral-reason]").forEach((button) => button.classList.remove("selected"));
-  el("deferralOtherLabel").classList.add("hidden");
-  el("deferralOther").value = "";
-  el("saveDeferralButton").disabled = true;
-  el("deferralDialog").showModal();
-}
-
-function saveDeferral(event) {
-  event.preventDefault();
-  if (!selectedDeferralReason) return;
-  if (state.deferrals.some((item) => item.fromDate === dateKey())) {
-    closeDialog(el("deferralDialog"));
-    showToast("今晚已经记录过顺延");
-    return;
-  }
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  const todayActions = actionLogs(state.logs.filter((log) => dateKey(new Date(log.createdAt)) === dateKey())).length;
-  state.deferrals.push({
-    id: uid("deferral"),
-    createdAt: new Date().toISOString(),
-    fromDate: dateKey(),
-    toDate: dateKey(tomorrow),
-    reason: selectedDeferralReason,
-    detail: el("deferralOther").value.trim(),
-    completedBeforeDeferral: todayActions
-  });
-  saveState();
-  renderAll();
-  closeDialog(el("deferralDialog"));
-  vibrate(25);
-  showToast(`${DEFERRAL_REASONS[selectedDeferralReason].label} · 已顺延到明天，不扣分`);
-}
-
 function openSettings() {
-  el("weeklyTargetInput").value = state.settings.weeklyTarget;
-  el("dailyLimitInput").value = state.settings.dailyLimit;
   el("ladderLevelInput").value = state.settings.ladderLevel;
   el("rewardLabelInput").value = state.settings.rewardLabel;
   el("rewardAmountInput").value = state.settings.rewardAmount;
@@ -1309,8 +1211,6 @@ function initSettings() {
   el("ladderLevelInput").innerHTML = LADDER_LEVELS.map((level, index) => `<option value="${index}">${escapeHtml(level.name)}</option>`).join("");
   el("settingsForm").addEventListener("submit", (event) => {
     event.preventDefault();
-    state.settings.weeklyTarget = Number(el("weeklyTargetInput").value);
-    state.settings.dailyLimit = Number(el("dailyLimitInput").value);
     state.settings.ladderLevel = Number(el("ladderLevelInput").value);
     state.settings.rewardLabel = el("rewardLabelInput").value.trim() || defaultState.settings.rewardLabel;
     state.settings.rewardAmount = Math.max(0, Number(el("rewardAmountInput").value) || 0);
@@ -1375,25 +1275,14 @@ function initEvents() {
     item.addEventListener("click", () => switchView(item.dataset.view, item.dataset.label));
   });
   el("startButton").addEventListener("click", openTrainingDialog);
-  el("deferButton").addEventListener("click", openDeferralDialog);
   el("settingsButton").addEventListener("click", openSettings);
   el("editRewardButton").addEventListener("click", openSettings);
   el("openLedgerButton").addEventListener("click", () => switchView("ledgerView", "勇气账本"));
   el("closeTrainingButton").addEventListener("click", () => closeDialog(el("trainingDialog")));
   el("closeSettingsButton").addEventListener("click", () => closeDialog(el("settingsDialog")));
-  el("closeDeferralButton").addEventListener("click", () => closeDialog(el("deferralDialog")));
   el("closeInstallButton").addEventListener("click", () => closeDialog(el("installDialog")));
   el("installButton").addEventListener("click", installApp);
   el("claimRewardButton").addEventListener("click", claimReward);
-  document.querySelectorAll("[data-deferral-reason]").forEach((button) => {
-    button.addEventListener("click", () => {
-      selectedDeferralReason = button.dataset.deferralReason;
-      document.querySelectorAll("[data-deferral-reason]").forEach((item) => item.classList.toggle("selected", item === button));
-      el("deferralOtherLabel").classList.toggle("hidden", selectedDeferralReason !== "other");
-      el("saveDeferralButton").disabled = false;
-    });
-  });
-  el("deferralForm").addEventListener("submit", saveDeferral);
   el("exportButton").addEventListener("click", exportData);
   el("resetButton").addEventListener("click", () => {
     const confirmed = window.confirm("确定清空所有训练、卡片和账本数据吗？此操作无法撤销。建议先导出数据。");
@@ -1418,7 +1307,7 @@ function initEvents() {
     showToast("真实开销已记录");
   });
 
-  [el("trainingDialog"), el("settingsDialog"), el("deferralDialog"), el("installDialog")].forEach((dialog) => {
+  [el("trainingDialog"), el("settingsDialog"), el("installDialog")].forEach((dialog) => {
     dialog.addEventListener("click", (event) => {
       const box = dialog.getBoundingClientRect();
       const outside = event.clientX < box.left || event.clientX > box.right || event.clientY < box.top || event.clientY > box.bottom;

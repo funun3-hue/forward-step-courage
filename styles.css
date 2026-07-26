@@ -459,26 +459,25 @@ summary:focus-visible {
   font-style: normal;
 }
 
-.day-dot.complete i {
-  border-color: rgba(119, 201, 181, 0.45);
-  background: rgba(119, 201, 181, 0.14);
-  color: #b5eadf;
+.day-dot.rejected i {
+  border-color: rgba(204, 158, 82, 0.5);
+  background: rgba(151, 108, 45, 0.18);
+  color: #d7b171;
 }
 
-.day-dot.progress i {
-  border-color: rgba(117, 169, 232, 0.5);
-  background: rgba(117, 169, 232, 0.14);
-  color: #c8e0ff;
-}
-
-.day-dot.deferred i {
-  border-color: rgba(255, 213, 142, 0.48);
-  background: rgba(255, 213, 142, 0.13);
-  color: var(--gold);
+.day-dot.gold i {
+  border-color: rgba(255, 213, 142, 0.92);
+  background: radial-gradient(circle at 35% 30%, rgba(255, 235, 184, 0.38), rgba(206, 142, 43, 0.2));
+  color: #ffe4a8;
+  box-shadow: 0 0 8px rgba(255, 205, 116, 0.7), 0 0 22px rgba(255, 184, 74, 0.42);
 }
 
 .day-dot.today i {
   box-shadow: 0 0 0 2px var(--blue);
+}
+
+.day-dot.gold.today i {
+  box-shadow: 0 0 0 2px var(--blue), 0 0 9px rgba(255, 205, 116, 0.75), 0 0 24px rgba(255, 184, 74, 0.48);
 }
 
 .week-legend {
@@ -502,9 +501,11 @@ summary:focus-visible {
   border-radius: 50%;
 }
 
-.legend-complete { background: var(--mint); }
-.legend-progress { background: var(--blue); }
-.legend-deferred { background: var(--gold); }
+.legend-rejected { background: #b6813e; }
+.legend-gold {
+  background: #ffd58e;
+  box-shadow: 0 0 7px rgba(255, 205, 116, 0.75);
+}
 .legend-neutral { background: #59637b; }
 
 .week-status-banner {

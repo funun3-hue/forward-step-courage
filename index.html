@@ -36,22 +36,17 @@
           <section class="section-block week-priority" aria-labelledby="weekHeading">
             <div class="section-heading">
               <div>
-                <p class="eyebrow">节奏，不是连胜</p>
-                <h2 id="weekHeading">本周训练日</h2>
+                <p class="eyebrow">让拒绝成为完成信号</p>
+                <h2 id="weekHeading">本周拒绝目标</h2>
               </div>
-              <span id="weekProgressText">0 / 4 个完整训练日</span>
+              <span id="weekProgressText">0 / 7 天获得拒绝</span>
             </div>
-            <div class="week-strip" id="weekStrip" aria-label="本周训练日进度"></div>
-            <div class="week-legend" aria-label="训练状态图例">
-              <span><i class="legend-complete"></i>完成5次</span>
-              <span><i class="legend-progress"></i>已行动1–4次</span>
-              <span><i class="legend-deferred"></i>顺延</span>
-              <span><i class="legend-neutral"></i>休息/未安排</span>
+            <div class="week-strip" id="weekStrip" aria-label="本周每日拒绝进度"></div>
+            <div class="week-legend" aria-label="拒绝目标图例">
+              <span><i class="legend-rejected"></i>1–4次拒绝·已点亮</span>
+              <span><i class="legend-gold"></i>5次拒绝·金光</span>
+              <span><i class="legend-neutral"></i>尚未获得拒绝</span>
             </div>
-            <button class="defer-action" id="deferButton" type="button">
-              <span aria-hidden="true">↷</span>
-              今晚无法完成，顺延一天
-            </button>
           </section>
 
           <section class="momentum-card" aria-labelledby="momentumHeading">
@@ -72,13 +67,13 @@
           <article class="hero-card">
             <div class="hero-glow" aria-hidden="true"></div>
             <div class="hero-topline">
-              <span class="status-chip" id="trainingStatus">本周第 0 个训练日</span>
+              <span class="status-chip" id="trainingStatus">本周 0 / 7 个拒绝目标日</span>
               <span class="hero-points"><b id="totalPoints">0</b> 勇气值</span>
             </div>
             <blockquote>今天的任务不是让她喜欢你。<br />是让恐惧不再替你做决定。</blockquote>
             <div class="today-count">
-              <span class="today-label">今日实际接近<small><b id="heroFundTotal">¥0.00</b> 勇气储备</small></span>
-              <strong><span id="todayAttempts">0</span><small id="todayLimit"> / 5</small></strong>
+              <span class="today-label">今日收到拒绝<small><b id="heroFundTotal">¥0.00</b> 勇气储备</small></span>
+              <strong><span id="todayAttempts">0</span><small id="todayLimit"> / 1</small></strong>
             </div>
             <button class="primary-action" id="startButton" type="button">
               <span aria-hidden="true">➜</span>
@@ -107,13 +102,6 @@
             </div>
           </section>
 
-          <div class="rest-pass" id="restPass">
-            <span class="rest-icon" aria-hidden="true">◐</span>
-            <div>
-              <strong>主动休息券尚未获得</strong>
-              <p>前六天完成 3 个间隔训练日后获得；漏一天不会清零。</p>
-            </div>
-          </div>
         </section>
 
         <section class="view" id="mapView" data-title="勇气地图">
@@ -297,9 +285,9 @@
 
         <section class="view" id="reviewView" data-title="本周复盘">
           <div class="stats-grid">
-            <article class="stat-card"><span>完整训练日</span><strong id="reviewDays">0</strong><small>目标 4 天 × 5 次</small></article>
+            <article class="stat-card"><span>拒绝目标日</span><strong id="reviewDays">0</strong><small>每天至少获得 1 次拒绝</small></article>
             <article class="stat-card"><span>实际接近</span><strong id="reviewActions">0</strong><small>白天和晚上都计入</small></article>
-            <article class="stat-card"><span>礼貌退出</span><strong id="reviewExits">0</strong><small>边界也是能力</small></article>
+            <article class="stat-card"><span>本周拒绝</span><strong id="reviewExits">0</strong><small>自然离开就是完成</small></article>
           </div>
 
           <section class="section-block attempt-trend-section" aria-labelledby="attemptTrendHeading">
@@ -394,21 +382,7 @@
       <form id="settingsForm">
         <p class="eyebrow">训练设置</p>
         <h2>让规则适合真实生活</h2>
-        <label>
-          <span>每周目标训练日</span>
-          <select id="weeklyTargetInput">
-            <option value="4">4 天</option>
-            <option value="3">3 天</option>
-          </select>
-        </label>
-        <label>
-          <span>每天实际接近目标</span>
-          <select id="dailyLimitInput">
-            <option value="3">3 次</option>
-            <option value="4">4 次</option>
-            <option value="5">5 次</option>
-          </select>
-        </label>
+        <p class="form-hint">固定目标：每天获得 1 次拒绝即点亮当天；5 次拒绝会升级为金色光环。没有顺延，也不会因为漏一天清零。</p>
         <label>
           <span>当前训练阶梯</span>
           <select id="ladderLevelInput"></select>
@@ -429,25 +403,6 @@
           <button class="text-button" id="exportButton" type="button">导出本地数据</button>
           <button class="text-button danger" id="resetButton" type="button">清空全部数据</button>
         </div>
-      </form>
-    </dialog>
-
-    <dialog class="sheet compact-sheet" id="deferralDialog">
-      <div class="sheet-handle" aria-hidden="true"></div>
-      <button class="sheet-close" id="closeDeferralButton" type="button" aria-label="关闭">×</button>
-      <form class="dialog-step" id="deferralForm">
-        <p class="eyebrow">现实调整，不是断签</p>
-        <h2>今晚为什么需要顺延？</h2>
-        <p class="dialog-lead">今天已经完成的接近仍然保留。顺延只记录客观原因，不扣勇气值。</p>
-        <div class="reason-choice-grid">
-          <button class="reason-choice" type="button" data-deferral-reason="rain"><span aria-hidden="true">☂</span><strong>当晚有雨</strong></button>
-          <button class="reason-choice" type="button" data-deferral-reason="busy"><span aria-hidden="true">⌚</span><strong>当晚有事</strong></button>
-          <button class="reason-choice" type="button" data-deferral-reason="energy"><span aria-hidden="true">◐</span><strong>身体状态不佳</strong></button>
-          <button class="reason-choice" type="button" data-deferral-reason="setting"><span aria-hidden="true">◇</span><strong>场地或时机不合适</strong></button>
-          <button class="reason-choice wide-choice" type="button" data-deferral-reason="other"><span aria-hidden="true">＋</span><strong>其他原因</strong></button>
-        </div>
-        <label class="hidden" id="deferralOtherLabel"><span>补充原因</span><textarea id="deferralOther" maxlength="100" placeholder="只记录客观情况，不责备自己。"></textarea></label>
-        <button class="primary-action" id="saveDeferralButton" type="submit" disabled>顺延到明天</button>
       </form>
     </dialog>
 
