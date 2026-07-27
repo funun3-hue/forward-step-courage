@@ -131,9 +131,9 @@ const CONTEXTS = [
   "其他"
 ];
 const WEEKDAY_NAMES = ["一", "二", "三", "四", "五", "六", "日"];
-const DAILY_REJECTION_GOAL = 1;
-const GOLD_REJECTION_GOAL = 5;
-const WEEKLY_REJECTION_DAYS = 7;
+const DAILY_ACTION_GOAL = 1;
+const COMPLETE_ACTION_GOAL = 5;
+const WEEKLY_ACTION_DAYS = 7;
 
 const defaultState = {
   version: 5,
@@ -262,7 +262,21 @@ function rejectionCountsByDay(logs = currentWeekLogs()) {
 
 function rejectionDayKeys(logs = currentWeekLogs()) {
   return Object.entries(rejectionCountsByDay(logs))
-    .filter(([, count]) => count >= DAILY_REJECTION_GOAL)
+    .filter(([, count]) => count > 0)
+    .map(([key]) => key);
+}
+
+function actionCountsByDay(logs = currentWeekLogs()) {
+  return actionLogs(logs).reduce((counts, log) => {
+    const key = dateKey(new Date(log.createdAt));
+    counts[key] = (counts[key] || 0) + 1;
+    return counts;
+  }, {});
+}
+
+function actionDayKeys(logs = currentWeekLogs()) {
+  return Object.entries(actionCountsByDay(logs))
+    .filter(([, count]) => count >= DAILY_ACTION_GOAL)
     .map(([key]) => key);
 }
 
@@ -323,11 +337,13 @@ function isRewardClaimed() {
 
 function renderToday() {
   const weekLogs = currentWeekLogs();
-  const rejectionDays = rejectionDayKeys(weekLogs);
+  const actionDays = actionDayKeys(weekLogs);
+  const actionCounts = actionCountsByDay(weekLogs);
   const rejectionCounts = rejectionCountsByDay(weekLogs);
   const todayLogs = state.logs.filter((log) => dateKey(new Date(log.createdAt)) === dateKey());
+  const todayActions = actionLogs(todayLogs).length;
   const todayRejections = rejectionLogs(todayLogs).length;
-  const targetMet = rejectionDays.length >= WEEKLY_REJECTION_DAYS;
+  const targetMet = actionDays.length >= WEEKLY_ACTION_DAYS;
   const weekActions = actionLogs(weekLogs);
   const weekFund = courageFundTotal(weekLogs);
   const weekExpense = currentWeekItems(state.expenses).reduce((sum, item) => sum + Number(item.amount || 0), 0);
@@ -340,27 +356,30 @@ function renderToday() {
   el("homeWeekFund").textContent = formatMoney(weekFund);
   el("homeWeekBalance").textContent = formatMoney(weekBalance, true);
   el("homeWeekBalance").classList.toggle("negative", weekBalance < 0);
-  el("todayAttempts").textContent = todayRejections;
-  el("todayLimit").textContent = ` / ${DAILY_REJECTION_GOAL}`;
-  el("trainingStatus").textContent = todayRejections >= GOLD_REJECTION_GOAL
-    ? "今日 5 次拒绝 · 金光已点亮"
-    : todayRejections >= DAILY_REJECTION_GOAL
-      ? "今日拒绝目标已完成"
-      : `本周 ${rejectionDays.length} / ${WEEKLY_REJECTION_DAYS} 个拒绝目标日`;
-  el("weekProgressText").textContent = `${rejectionDays.length} / ${WEEKLY_REJECTION_DAYS} 天获得拒绝`;
-  el("startButton").innerHTML = todayRejections >= DAILY_REJECTION_GOAL
-    ? "<span aria-hidden=\"true\">＋</span> 今日已点亮 · 仍可自然行动"
+  el("todayAttempts").textContent = todayActions;
+  el("todayLimit").textContent = ` / ${DAILY_ACTION_GOAL}`;
+  el("trainingStatus").textContent = todayActions >= COMPLETE_ACTION_GOAL
+    ? "今日 5 次出手 · 完整训练已点亮"
+    : todayActions >= DAILY_ACTION_GOAL
+      ? `今日已出手${todayRejections ? ` · 收到 ${todayRejections} 次拒绝` : ""}`
+      : `本周 ${actionDays.length} / ${WEEKLY_ACTION_DAYS} 个出手日`;
+  el("weekProgressText").textContent = `${actionDays.length} / ${WEEKLY_ACTION_DAYS} 天有真实出手`;
+  el("startButton").innerHTML = todayActions >= DAILY_ACTION_GOAL
+    ? "<span aria-hidden=\"true\">＋</span> 今日已出手 · 仍可自然行动"
     : "<span aria-hidden=\"true\">➜</span> 注意到一个合适机会";
 
   el("weekStrip").innerHTML = getWeekDays()
     .map((date, index) => {
       const key = dateKey(date);
-      const count = rejectionCounts[key] || 0;
-      const status = count >= GOLD_REJECTION_GOAL ? "gold" : count >= DAILY_REJECTION_GOAL ? "rejected" : "neutral";
+      const count = actionCounts[key] || 0;
+      const rejectionCount = rejectionCounts[key] || 0;
+      const status = count >= COMPLETE_ACTION_GOAL ? "complete" : count >= DAILY_ACTION_GOAL ? "progress" : "neutral";
+      const rejectionClass = rejectionCount ? " has-rejection" : "";
       const today = key === dateKey();
-      const mark = status === "gold" ? `✦${count}` : status === "rejected" ? `${count}拒` : date.getDate();
-      const label = status === "gold" ? `获得${count}次拒绝，金光已点亮` : status === "rejected" ? `获得${count}次拒绝，今日已点亮` : "尚未记录拒绝";
-      return `<div class="day-dot ${status}${today ? " today" : ""}" aria-label="周${WEEKDAY_NAMES[index]}：${label}">
+      const mark = status === "complete" ? `✓${count}` : status === "progress" ? `${count}/5` : date.getDate();
+      const actionLabel = status === "complete" ? `完成${count}次出手` : status === "progress" ? `已出手${count}次` : "尚未出手";
+      const rejectionLabel = rejectionCount ? `，其中收到${rejectionCount}次拒绝` : "";
+      return `<div class="day-dot ${status}${rejectionClass}${today ? " today" : ""}" aria-label="周${WEEKDAY_NAMES[index]}：${actionLabel}${rejectionLabel}">
         <span>周${WEEKDAY_NAMES[index]}</span>
         <i>${mark}</i>
       </div>`;
@@ -372,12 +391,12 @@ function renderToday() {
   el("rewardValue").textContent = Number(state.settings.rewardAmount) > 0
     ? `真实预算 ¥${Number(state.settings.rewardAmount).toFixed(0)} · 不计算虚构省钱`
     : "时间型奖赏 · 真实兑现";
-  el("rewardProgress").style.width = `${Math.min(100, (rejectionDays.length / WEEKLY_REJECTION_DAYS) * 100)}%`;
+  el("rewardProgress").style.width = `${Math.min(100, (actionDays.length / WEEKLY_ACTION_DAYS) * 100)}%`;
   el("rewardState").textContent = rewardClaimed
     ? "本周已经兑现"
     : targetMet
       ? "已解锁，可以兑现"
-      : `本周 ${WEEKLY_REJECTION_DAYS} 天都获得一次拒绝后兑现`;
+      : `本周 ${WEEKLY_ACTION_DAYS} 天都有一次真实出手后兑现`;
   el("claimRewardButton").classList.toggle("hidden", !targetMet || rewardClaimed);
 }
 
@@ -970,6 +989,7 @@ function renderTrainingDialog() {
   if (trainingFlow.stage === "reward") {
     const card = trainingFlow.savedCard;
     const todayLogs = state.logs.filter((log) => dateKey(new Date(log.createdAt)) === dateKey());
+    const todayActions = actionLogs(todayLogs).length;
     const todayRejections = rejectionLogs(todayLogs).length;
     const weekLogs = currentWeekLogs();
     const weekActions = actionLogs(weekLogs).length;
@@ -995,7 +1015,7 @@ function renderTrainingDialog() {
           <div><span>本周勇气储备</span><strong>${formatMoney(weekFund)}</strong></div>
           <div><span>当前本周净额</span><strong>${formatMoney(weekBalance, true)}</strong></div>
         </div>
-        <p class="reward-progress-copy">今日拒绝 ${todayRejections} 次${todayRejections >= GOLD_REJECTION_GOAL ? " · 金光已点亮" : todayRejections >= DAILY_REJECTION_GOAL ? " · 今日目标已点亮，可以停止" : " · 真实出手已经保留，拒绝出现时会点亮今日"}</p>
+        <p class="reward-progress-copy">今日已真实出手 ${todayActions} 次${todayActions >= COMPLETE_ACTION_GOAL ? " · 绿色完整训练已点亮" : " · 蓝色行动底已点亮"}${todayRejections ? `；其中 ${todayRejections} 次拒绝已记为暗金描边` : ""}</p>
         <button class="primary-action" id="rewardLedgerButton" type="button">查看刚刚入账</button>
         <button class="secondary-action" id="viewCardButton" type="button">去卡册翻开它</button>
         <button class="text-button" id="finishTrainingButton" type="button">完成本次记录</button>

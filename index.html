@@ -36,16 +36,17 @@
           <section class="section-block week-priority" aria-labelledby="weekHeading">
             <div class="section-heading">
               <div>
-                <p class="eyebrow">让拒绝成为完成信号</p>
-                <h2 id="weekHeading">本周拒绝目标</h2>
+                <p class="eyebrow">先让行动发生</p>
+                <h2 id="weekHeading">本周出手</h2>
               </div>
-              <span id="weekProgressText">0 / 7 天获得拒绝</span>
+              <span id="weekProgressText">0 / 7 天有真实出手</span>
             </div>
-            <div class="week-strip" id="weekStrip" aria-label="本周每日拒绝进度"></div>
-            <div class="week-legend" aria-label="拒绝目标图例">
-              <span><i class="legend-rejected"></i>1–4次拒绝·已点亮</span>
-              <span><i class="legend-gold"></i>5次拒绝·金光</span>
-              <span><i class="legend-neutral"></i>尚未获得拒绝</span>
+            <div class="week-strip" id="weekStrip" aria-label="本周每日出手进度"></div>
+            <div class="week-legend" aria-label="出手与拒绝记录图例">
+              <span><i class="legend-progress"></i>出手1–4次</span>
+              <span><i class="legend-complete"></i>出手5次·完整训练</span>
+              <span><i class="legend-rejection"></i>有拒绝·暗金描边</span>
+              <span><i class="legend-neutral"></i>尚未出手</span>
             </div>
           </section>
 
@@ -67,12 +68,12 @@
           <article class="hero-card">
             <div class="hero-glow" aria-hidden="true"></div>
             <div class="hero-topline">
-              <span class="status-chip" id="trainingStatus">本周 0 / 7 个拒绝目标日</span>
+              <span class="status-chip" id="trainingStatus">本周 0 / 7 个出手日</span>
               <span class="hero-points"><b id="totalPoints">0</b> 勇气值</span>
             </div>
             <blockquote>今天的任务不是让她喜欢你。<br />是让恐惧不再替你做决定。</blockquote>
             <div class="today-count">
-              <span class="today-label">今日收到拒绝<small><b id="heroFundTotal">¥0.00</b> 勇气储备</small></span>
+              <span class="today-label">今日实际出手<small><b id="heroFundTotal">¥0.00</b> 勇气储备</small></span>
               <strong><span id="todayAttempts">0</span><small id="todayLimit"> / 1</small></strong>
             </div>
             <button class="primary-action" id="startButton" type="button">
@@ -371,7 +372,7 @@
       <form id="settingsForm">
         <p class="eyebrow">训练设置</p>
         <h2>让规则适合真实生活</h2>
-        <p class="form-hint">固定目标：每天获得 1 次拒绝即点亮当天；5 次拒绝会升级为金色光环。没有顺延，也不会因为漏一天清零。</p>
+        <p class="form-hint">固定目标：每天真实出手 1 次即以蓝色点亮当天，5 次出手升级为绿色完整训练；当天出现拒绝时，仅增加暗金描边。没有顺延，也不会因为漏一天清零。</p>
         <label>
           <span>当前训练阶梯</span>
           <select id="ladderLevelInput"></select>
