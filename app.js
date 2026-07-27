@@ -374,11 +374,15 @@ function renderToday() {
       const count = actionCounts[key] || 0;
       const rejectionCount = rejectionCounts[key] || 0;
       const status = count >= COMPLETE_ACTION_GOAL ? "complete" : count >= DAILY_ACTION_GOAL ? "progress" : "neutral";
-      const rejectionClass = rejectionCount ? " has-rejection" : "";
+      const rejectionClass = rejectionCount >= 5 ? " rejection-gold" : rejectionCount ? " has-rejection" : "";
       const today = key === dateKey();
       const mark = status === "complete" ? `✓${count}` : status === "progress" ? `${count}/5` : date.getDate();
       const actionLabel = status === "complete" ? `完成${count}次出手` : status === "progress" ? `已出手${count}次` : "尚未出手";
-      const rejectionLabel = rejectionCount ? `，其中收到${rejectionCount}次拒绝` : "";
+      const rejectionLabel = rejectionCount >= 5
+        ? `，其中收到${rejectionCount}次拒绝，闪亮金边已点亮`
+        : rejectionCount
+          ? `，其中收到${rejectionCount}次拒绝`
+          : "";
       return `<div class="day-dot ${status}${rejectionClass}${today ? " today" : ""}" aria-label="周${WEEKDAY_NAMES[index]}：${actionLabel}${rejectionLabel}">
         <span>周${WEEKDAY_NAMES[index]}</span>
         <i>${mark}</i>

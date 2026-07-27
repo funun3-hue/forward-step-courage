@@ -45,7 +45,8 @@
             <div class="week-legend" aria-label="出手与拒绝记录图例">
               <span><i class="legend-progress"></i>出手1–4次</span>
               <span><i class="legend-complete"></i>出手5次·完整训练</span>
-              <span><i class="legend-rejection"></i>有拒绝·暗金描边</span>
+              <span><i class="legend-rejection"></i>拒绝1–4次·暗金边</span>
+              <span><i class="legend-rejection-gold"></i>拒绝5次·闪亮金边</span>
               <span><i class="legend-neutral"></i>尚未出手</span>
             </div>
           </section>
@@ -372,7 +373,7 @@
       <form id="settingsForm">
         <p class="eyebrow">训练设置</p>
         <h2>让规则适合真实生活</h2>
-        <p class="form-hint">固定目标：每天真实出手 1 次即以蓝色点亮当天，5 次出手升级为绿色完整训练；当天出现拒绝时，仅增加暗金描边。没有顺延，也不会因为漏一天清零。</p>
+        <p class="form-hint">固定目标：每天真实出手 1 次即以蓝色点亮当天，5 次出手升级为绿色完整训练；拒绝1–4次增加暗金边，达到5次升级为闪亮金边。没有顺延，也不会因为漏一天清零。</p>
         <label>
           <span>当前训练阶梯</span>
           <select id="ladderLevelInput"></select>
