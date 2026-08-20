@@ -1289,7 +1289,6 @@ function initEvents() {
   el("startButton").addEventListener("click", openTrainingDialog);
   el("settingsButton").addEventListener("click", openSettings);
   el("editRewardButton").addEventListener("click", openSettings);
-  el("openLedgerButton").addEventListener("click", () => switchView("ledgerView", "勇气账本"));
   el("closeTrainingButton").addEventListener("click", () => closeDialog(el("trainingDialog")));
   el("closeSettingsButton").addEventListener("click", () => closeDialog(el("settingsDialog")));
   el("closeInstallButton").addEventListener("click", () => closeDialog(el("installDialog")));
