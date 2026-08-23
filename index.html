@@ -33,14 +33,8 @@
 
       <main>
         <section class="view active" id="todayView" data-title="今日训练">
-          <section class="section-block week-priority" aria-labelledby="weekHeading">
-            <div class="section-heading">
-              <div>
-                <p class="eyebrow">先让行动发生</p>
-                <h2 id="weekHeading">本周出手</h2>
-              </div>
-              <span id="weekProgressText">0 / 7 天有真实出手</span>
-            </div>
+          <section class="section-block week-priority" aria-label="本周出手">
+            <span class="week-progress-only" id="weekProgressText">0 / 7 天有真实出手</span>
             <div class="week-strip" id="weekStrip" aria-label="本周每日出手进度"></div>
             <div class="week-legend" aria-label="出手与拒绝记录图例">
               <span><i class="legend-progress"></i>出手1–4次</span>
@@ -197,11 +191,10 @@
           <section class="card-album-head">
             <div>
               <p class="eyebrow">收藏真实的新证据</p>
-              <h2>受挫不再只代表屈辱</h2>
             </div>
             <span class="album-count"><b id="cardCount">0</b> 张</span>
           </section>
-          <p class="album-help">点击卡片翻面。纹样由行动生成，稀有度取决于你跨越的焦虑，不取决于对方是否喜欢你。</p>
+          <p class="album-help">点击卡片翻面。纹样由行动生成，稀有度取决于你跨越的焦虑大小。</p>
           <div class="card-grid" id="cardGrid"></div>
         </section>
 
@@ -234,10 +227,6 @@
                   <option>其他</option>
                 </select>
               </label>
-              <label class="wide-field">
-                <span>备注（可选）</span>
-                <input id="expenseNote" maxlength="40" placeholder="不记录吃饭开销" />
-              </label>
               <button class="secondary-action" type="submit">记一笔</button>
             </form>
             <div class="expense-list" id="expenseList"></div>
@@ -253,7 +242,6 @@
               <div class="fund-stat fund-stat-primary">
                 <span>行动积累</span>
                 <strong id="fundWeekEarned">¥0.00</strong>
-                <p class="fund-rule-note">这是你为勇气设置的奖赏预算，拒绝后自然离开同样入账，也不会形成欠债或惩罚。</p>
               </div>
               <div class="fund-stat">
                 <span>非日常开销</span>
@@ -325,8 +313,7 @@
           <section class="section-block" aria-labelledby="historyHeading">
             <div class="section-heading">
               <div>
-                <p class="eyebrow">只记录行为，不记录她是谁</p>
-                <h2 id="historyHeading">本周行动记录</h2>
+                <h2 id="historyHeading">本周行为统计</h2>
               </div>
             </div>
             <div class="history-list" id="historyList"></div>

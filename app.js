@@ -122,7 +122,8 @@ const CONTEXTS = [
   "校园",
   "活动现场",
   "交通场所",
-  "小区公共区域",
+  "地铁",
+  "小区",
   "美术馆",
   "博物馆",
   "公园/绿道",
@@ -136,7 +137,7 @@ const COMPLETE_ACTION_GOAL = 5;
 const WEEKLY_ACTION_DAYS = 7;
 
 const defaultState = {
-  version: 5,
+  version: 6,
   points: 0,
   settings: {
     ladderLevel: 3,
@@ -161,17 +162,23 @@ function loadState() {
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
     if (!saved || typeof saved !== "object") return structuredClone(defaultState);
+    const savedVersion = Number(saved.version || 1);
+    const normalizeContext = (context) => {
+      if (context === "小区公共区域") return "小区";
+      if (savedVersion < 6 && context === "其他") return "地铁";
+      return context;
+    };
     const migrated = {
       ...structuredClone(defaultState),
       ...saved,
       settings: { ...defaultState.settings, ...(saved.settings || {}) },
-      logs: Array.isArray(saved.logs) ? saved.logs : [],
-      cards: Array.isArray(saved.cards) ? saved.cards : [],
+      logs: Array.isArray(saved.logs) ? saved.logs.map((log) => ({ ...log, context: normalizeContext(log.context) })) : [],
+      cards: Array.isArray(saved.cards) ? saved.cards.map((card) => ({ ...card, context: normalizeContext(card.context) })) : [],
       expenses: Array.isArray(saved.expenses) ? saved.expenses : [],
       deferrals: Array.isArray(saved.deferrals) ? saved.deferrals : [],
       rewardClaims: Array.isArray(saved.rewardClaims) ? saved.rewardClaims : []
     };
-    migrated.version = 5;
+    migrated.version = 6;
     return migrated;
   } catch (error) {
     console.warn("无法读取本地数据，已使用默认设置。", error);
@@ -376,7 +383,7 @@ function renderToday() {
       const status = count >= COMPLETE_ACTION_GOAL ? "complete" : count >= DAILY_ACTION_GOAL ? "progress" : "neutral";
       const rejectionClass = rejectionCount >= 5 ? " rejection-gold" : rejectionCount ? " has-rejection" : "";
       const today = key === dateKey();
-      const mark = status === "complete" ? `✓${count}` : status === "progress" ? `${count}/5` : date.getDate();
+      const mark = status === "complete" ? `${count}✓` : status === "progress" ? `${count}/5` : date.getDate();
       const actionLabel = status === "complete" ? `完成${count}次出手` : status === "progress" ? `已出手${count}次` : "尚未出手";
       const rejectionLabel = rejectionCount >= 5
         ? `，其中收到${rejectionCount}次拒绝，闪亮金边已点亮`
@@ -474,8 +481,8 @@ function renderMap() {
   }).join("");
 }
 
-function cardSymbol(card) {
-  return ["勇", "行", "真", "定", "进", "界", "光", "诚"][Number(card.pattern) % 8];
+function cardSymbol(card, visualIndex = Number(card.pattern) % 16) {
+  return ["勇", "行", "真", "定", "进", "界", "光", "诚", "跃", "启", "稳", "敢", "澄", "燃", "拓", "昂"][visualIndex % 16];
 }
 
 function cardBackMessage(card, index) {
@@ -538,12 +545,15 @@ function renderCards() {
 
   const reversedCards = [...state.cards].reverse();
   el("cardGrid").innerHTML = reversedCards
-    .map((card, displayIndex) => `
+    .map((card, displayIndex) => {
+      const chronologicalIndex = reversedCards.length - 1 - displayIndex;
+      const visualIndex = chronologicalIndex % 16;
+      return `
       <button class="courage-card" type="button" aria-label="翻开${escapeHtml(card.title)}" aria-pressed="false">
         <span class="card-inner">
-          <span class="card-face card-back pattern-${Number(card.pattern) % 8}">
+          <span class="card-face card-back pattern-${visualIndex}">
             <span class="card-rarity">${escapeHtml(card.rarity)} · 勇气卡</span>
-            <span class="card-emblem">${cardSymbol(card)}</span>
+            <span class="card-emblem">${cardSymbol(card, visualIndex)}</span>
             <span class="card-back-bottom"><span class="card-date">${escapeHtml(formatShortDate(card.createdAt))}</span><strong>${escapeHtml(cardBackMessage(card, reversedCards.length - 1 - displayIndex))}</strong></span>
           </span>
           <span class="card-face card-front">
@@ -559,7 +569,8 @@ function renderCards() {
             </span>
           </span>
         </span>
-      </button>`)
+      </button>`;
+    })
     .join("");
 
   document.querySelectorAll(".courage-card").forEach((card) => {
@@ -704,30 +715,13 @@ function renderReview() {
         </article>`).join("")
     : `<div class="empty-state">完成一次真实行动后，新证据会出现在这里。</div>`;
 
-  el("historyList").innerHTML = logs.length
-    ? [...logs].reverse().map((log) => {
-        const detail = log.kind === "avoided"
-          ? `阻碍：${REASON_GROUPS[log.reasonCategory || categorizeReason(log.reasonText)]?.label || "其他阻碍"}${log.reasonText ? ` · ${escapeHtml(log.reasonText)}` : ""}`
-          : log.note
-            ? escapeHtml(log.note)
-            : `焦虑 ${log.anxietyBefore ?? "—"} → ${log.anxietyAfter ?? "—"}`;
-        const contextDetail = log.context && log.context !== "未记录" ? `${escapeHtml(log.context)} · ` : "";
-        const groupDetail = actionLogs([log]).length && log.fundGroup
-          ? `${escapeHtml(COURAGE_FUND_GROUPS[log.fundGroup] || "同行情况未记录")}${log.fundGroup !== "solo" && log.groupComposition && log.groupComposition !== "unspecified" ? ` · ${escapeHtml(GROUP_COMPOSITIONS[log.groupComposition])}` : ""} · `
-          : "";
-        const fundDetail = Number(log.fundAmount) > 0 ? ` · 储备金 +${formatMoney(log.fundAmount)}` : "";
-        const launchDetail = actionLogs([log]).length
-          ? log.launchLatencyMs !== null && log.launchLatencyMs !== undefined && log.launchLatencyMs !== "" && Number.isFinite(Number(log.launchLatencyMs)) && Number(log.launchLatencyMs) >= 0
-            ? ` · 从发现到行动 ${formatLaunchLatency(log.launchLatencyMs)}`
-            : " · 启动时间未记录"
-          : "";
-        return `<article class="history-item">
-          <i aria-hidden="true">${log.kind === "avoided" ? "○" : log.kind === "unsuitable" ? "◇" : "✓"}</i>
-          <div><strong>${escapeHtml(OUTCOME_LABELS[log.kind])}</strong><small>${contextDetail}${groupDetail}${detail}${fundDetail}${launchDetail}</small></div>
-          <span>${escapeHtml(formatTime(log.createdAt))}</span>
-        </article>`;
-      }).join("")
-    : `<div class="empty-state">本周还没有行动记录。工具只保存你的行为与经验，不记录她是谁。</div>`;
+  const unsuitableCount = logs.filter((log) => log.kind === "unsuitable").length;
+  el("historyList").innerHTML = `
+    <div class="behavior-summary">
+      <div><span>实际出手</span><strong>${actions.length}</strong><small>次</small></div>
+      <div><span>判断不合适</span><strong>${unsuitableCount}</strong><small>次</small></div>
+      <div><span>回避</span><strong>${avoidances.length}</strong><small>次</small></div>
+    </div>`;
 }
 
 function renderExpenses() {
@@ -1310,7 +1304,7 @@ function initEvents() {
       createdAt: new Date().toISOString(),
       amount,
       category: el("expenseCategory").value,
-      note: el("expenseNote").value.trim()
+      note: ""
     });
     saveState();
     event.currentTarget.reset();
