@@ -34,13 +34,17 @@
       <main>
         <section class="view active" id="todayView" data-title="今日训练">
           <section class="section-block week-priority" aria-label="本周出手">
-            <span class="week-progress-only" id="weekProgressText">0 / 7 天有真实出手</span>
+            <div class="week-toolbar">
+              <span class="week-progress-only" id="weekProgressText">0 / 7 天有真实出手</span>
+              <select class="week-selector" id="weekSelector" aria-label="选择查看周"></select>
+            </div>
             <div class="week-strip" id="weekStrip" aria-label="本周每日出手进度"></div>
             <div class="week-legend" aria-label="出手与拒绝记录图例">
               <span><i class="legend-progress"></i>出手1–4次</span>
               <span><i class="legend-complete"></i>出手5次及以上</span>
               <span><i class="legend-rejection"></i>拒绝1–4次·暗金边</span>
               <span><i class="legend-rejection-gold"></i>拒绝5次·闪亮金边</span>
+              <span><i class="legend-rejection-hot"></i>拒绝6–10次·炽热金红边</span>
             </div>
           </section>
 
@@ -183,13 +187,10 @@
         </section>
 
         <section class="view" id="cardsView" data-title="勇气卡册">
-          <section class="card-album-head">
-            <div>
-              <p class="eyebrow">收藏真实的新证据</p>
-            </div>
+          <div class="card-album-summary">
+            <p class="album-help"><span>点击卡片翻面。</span><span>纹样由行动生成，稀有度取决于你跨越的焦虑大小。</span></p>
             <span class="album-count"><b id="cardCount">0</b> 张</span>
-          </section>
-          <p class="album-help">点击卡片翻面。纹样由行动生成，稀有度取决于你跨越的焦虑大小。</p>
+          </div>
           <div class="card-grid" id="cardGrid"></div>
         </section>
 

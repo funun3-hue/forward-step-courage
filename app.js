@@ -155,6 +155,7 @@ let state = loadState();
 let installPrompt = null;
 let toastTimer = null;
 let trainingFlow = null;
+let selectedWeekKey = weekKey();
 
 const el = (id) => document.getElementById(id);
 
@@ -230,14 +231,23 @@ function weekKey(date = new Date()) {
   return dateKey(weekStart(date));
 }
 
-function currentWeekItems(items, field = "createdAt") {
-  const start = weekStart();
+function dateFromKey(value) {
+  const [year, month, day] = String(value).split("-").map(Number);
+  return new Date(year, month - 1, day);
+}
+
+function weekItems(items, start, field = "createdAt") {
   const end = new Date(start);
   end.setDate(end.getDate() + 7);
   return items.filter((item) => {
     const date = new Date(item[field]);
     return date >= start && date < end;
   });
+}
+
+function currentWeekItems(items, field = "createdAt") {
+  const start = weekStart();
+  return weekItems(items, start, field);
 }
 
 function currentWeekLogs() {
@@ -342,13 +352,29 @@ function vibrate(pattern = 35) {
   if (navigator.vibrate) navigator.vibrate(pattern);
 }
 
-function getWeekDays() {
-  const start = weekStart();
+function getWeekDays(start = weekStart()) {
   return Array.from({ length: 7 }, (_, index) => {
     const date = new Date(start);
     date.setDate(start.getDate() + index);
     return date;
   });
+}
+
+function weekRangeLabel(key) {
+  const start = dateFromKey(key);
+  const end = new Date(start);
+  end.setDate(end.getDate() + 6);
+  const range = `${start.getMonth() + 1}/${start.getDate()}–${end.getMonth() + 1}/${end.getDate()}`;
+  return key === weekKey() ? `本周 ${range}` : range;
+}
+
+function availableWeekKeys() {
+  const keys = new Set([weekKey(), selectedWeekKey]);
+  actionLogs().forEach((log) => {
+    const date = new Date(log.createdAt);
+    if (!Number.isNaN(date.getTime())) keys.add(weekKey(date));
+  });
+  return [...keys].sort((a, b) => b.localeCompare(a));
 }
 
 function isRewardClaimed() {
@@ -358,8 +384,11 @@ function isRewardClaimed() {
 function renderToday() {
   const weekLogs = currentWeekLogs();
   const actionDays = actionDayKeys(weekLogs);
-  const actionCounts = actionCountsByDay(weekLogs);
-  const rejectionCounts = rejectionCountsByDay(weekLogs);
+  const selectedWeekStart = weekStart(dateFromKey(selectedWeekKey));
+  const selectedWeekLogs = weekItems(state.logs, selectedWeekStart);
+  const selectedActionDays = actionDayKeys(selectedWeekLogs);
+  const actionCounts = actionCountsByDay(selectedWeekLogs);
+  const rejectionCounts = rejectionCountsByDay(selectedWeekLogs);
   const todayLogs = state.logs.filter((log) => dateKey(new Date(log.createdAt)) === dateKey());
   const todayActions = actionLogs(todayLogs).length;
   const todayRejections = rejectionLogs(todayLogs).length;
@@ -381,27 +410,35 @@ function renderToday() {
     : todayActions >= DAILY_ACTION_GOAL
       ? `今日已出手${todayRejections ? ` · 收到 ${todayRejections} 次拒绝` : ""}`
       : `本周 ${actionDays.length} / ${WEEKLY_ACTION_DAYS} 个出手日`;
-  el("weekProgressText").textContent = `${actionDays.length} / ${WEEKLY_ACTION_DAYS} 天有真实出手`;
+  el("weekProgressText").textContent = `${selectedActionDays.length} / ${WEEKLY_ACTION_DAYS} 天有真实出手`;
+  el("weekSelector").innerHTML = availableWeekKeys()
+    .map((key) => `<option value="${key}"${key === selectedWeekKey ? " selected" : ""}>${weekRangeLabel(key)}</option>`)
+    .join("");
   el("startButton").innerHTML = todayActions >= DAILY_ACTION_GOAL
     ? "<span aria-hidden=\"true\">＋</span> 今日已出手 · 仍可自然行动"
     : "<span aria-hidden=\"true\">➜</span> 注意到一个合适机会";
 
-  el("weekStrip").innerHTML = getWeekDays()
+  el("weekStrip").innerHTML = getWeekDays(selectedWeekStart)
     .map((date, index) => {
       const key = dateKey(date);
       const count = actionCounts[key] || 0;
       const rejectionCount = rejectionCounts[key] || 0;
       const status = count >= COMPLETE_ACTION_GOAL ? "complete" : count >= DAILY_ACTION_GOAL ? "progress" : "neutral";
-      const rejectionClass = rejectionCount >= 5 ? " rejection-gold" : rejectionCount ? " has-rejection" : "";
-      const today = key === dateKey();
+      const rejectionClass = rejectionCount >= 6 ? " rejection-hot" : rejectionCount >= 5 ? " rejection-gold" : rejectionCount ? " has-rejection" : "";
+      const heatLevel = Math.min(10, rejectionCount);
+      const heatColors = ["", "", "", "", "", "", "#ffc178", "#ffa662", "#ff8a50", "#ff7345", "#ff5e3b"];
+      const rejectionStyle = rejectionCount >= 6 ? ` style="--rejection-border:${heatColors[heatLevel]}"` : "";
+      const today = selectedWeekKey === weekKey() && key === dateKey();
       const mark = status === "complete" ? `${count}✓` : status === "progress" ? `${count}/5` : date.getDate();
       const actionLabel = status === "complete" ? `完成${count}次出手` : status === "progress" ? `已出手${count}次` : "尚未出手";
-      const rejectionLabel = rejectionCount >= 5
-        ? `，其中收到${rejectionCount}次拒绝，闪亮金边已点亮`
+      const rejectionLabel = rejectionCount >= 6
+        ? `，其中收到${rejectionCount}次拒绝，金边正逐渐转为炽热金红色`
+        : rejectionCount >= 5
+          ? `，其中收到${rejectionCount}次拒绝，闪亮金边已点亮`
         : rejectionCount
           ? `，其中收到${rejectionCount}次拒绝`
           : "";
-      return `<div class="day-dot ${status}${rejectionClass}${today ? " today" : ""}" aria-label="周${WEEKDAY_NAMES[index]}：${actionLabel}${rejectionLabel}">
+      return `<div class="day-dot ${status}${rejectionClass}${today ? " today" : ""}"${rejectionStyle} aria-label="周${WEEKDAY_NAMES[index]}：${actionLabel}${rejectionLabel}">
         <span>周${WEEKDAY_NAMES[index]}</span>
         <i>${mark}</i>
       </div>`;
@@ -1333,6 +1370,10 @@ function initEvents() {
     event.currentTarget.reset();
     renderAll();
     showToast("真实开销已记录");
+  });
+  el("weekSelector").addEventListener("change", (event) => {
+    selectedWeekKey = event.currentTarget.value;
+    renderToday();
   });
 
   [el("trainingDialog"), el("settingsDialog"), el("installDialog"), el("cardDayDialog")].forEach((dialog) => {
