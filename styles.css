@@ -221,7 +221,7 @@ summary:focus-visible {
 .hero-momentum {
   position: relative;
   z-index: 1;
-  margin: 64px 0 34px;
+  margin: 26px 0 28px;
 }
 
 .hero-momentum h2 {
@@ -239,7 +239,7 @@ summary:focus-visible {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
-  margin-bottom: 14px;
+  margin: 58px 0 0;
   color: var(--muted);
   font-size: 0.8rem;
 }
@@ -1591,6 +1591,57 @@ summary:focus-visible {
   white-space: nowrap;
 }
 
+.ledger-breakdowns {
+  display: grid;
+  gap: 14px;
+}
+
+.ledger-breakdown {
+  padding: 15px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.ledger-breakdown h3 {
+  margin: 0 0 11px;
+  font-size: 0.86rem;
+}
+
+.compact-stat-list {
+  display: grid;
+  gap: 7px;
+}
+
+.compact-stat-list > div:not(.compact-stat-empty) {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 9px 10px;
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.compact-stat-list span {
+  min-width: 0;
+  color: var(--muted);
+  font-size: 0.7rem;
+  line-height: 1.4;
+}
+
+.compact-stat-list strong {
+  color: var(--gold);
+  font-size: 0.84rem;
+}
+
+.compact-stat-empty {
+  padding: 12px;
+  color: var(--muted);
+  font-size: 0.7rem;
+  text-align: center;
+}
+
 .fund-ledger-summary {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -1782,7 +1833,7 @@ textarea::placeholder {
 
 .data-actions {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 16px;
   padding-top: 8px;
 }
@@ -2364,7 +2415,7 @@ input[type="range"] {
   }
 
   .hero-momentum {
-    margin-top: 58px;
+    margin-top: 24px;
   }
 
   .level-pill span:first-child {

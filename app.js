@@ -137,7 +137,7 @@ const COMPLETE_ACTION_GOAL = 5;
 const WEEKLY_ACTION_DAYS = 7;
 
 const defaultState = {
-  version: 6,
+  version: 7,
   points: 0,
   settings: {
     ladderLevel: 3,
@@ -173,12 +173,19 @@ function loadState() {
       ...saved,
       settings: { ...defaultState.settings, ...(saved.settings || {}) },
       logs: Array.isArray(saved.logs) ? saved.logs.map((log) => ({ ...log, context: normalizeContext(log.context) })) : [],
-      cards: Array.isArray(saved.cards) ? saved.cards.map((card) => ({ ...card, context: normalizeContext(card.context) })) : [],
+      cards: Array.isArray(saved.cards) ? saved.cards.map((card, index) => {
+        const migratedCard = { ...card, context: normalizeContext(card.context) };
+        if (savedVersion < 7) {
+          migratedCard.quote = cardQuote(migratedCard.kind, index + Number(migratedCard.anxietyBefore || 0));
+          migratedCard.evidence = generateEvidence(migratedCard.kind, Number(migratedCard.anxietyBefore || 0), Number(migratedCard.anxietyAfter || 0));
+        }
+        return migratedCard;
+      }) : [],
       expenses: Array.isArray(saved.expenses) ? saved.expenses : [],
       deferrals: Array.isArray(saved.deferrals) ? saved.deferrals : [],
       rewardClaims: Array.isArray(saved.rewardClaims) ? saved.rewardClaims : []
     };
-    migrated.version = 6;
+    migrated.version = 7;
     return migrated;
   } catch (error) {
     console.warn("无法读取本地数据，已使用默认设置。", error);
@@ -247,6 +254,12 @@ function rejectionLogs(logs = state.logs) {
 
 function courageFundAmount(level = "everyday", group = "solo") {
   return Number(COURAGE_FUND_RATES[level]?.[group] || 0);
+}
+
+function availableCourageFundAmount(level = "everyday", group = "solo") {
+  const today = dateKey();
+  const todayActions = actionLogs().filter((log) => dateKey(new Date(log.createdAt)) === today).length;
+  return todayActions >= COMPLETE_ACTION_GOAL ? 0 : courageFundAmount(level, group);
 }
 
 function courageFundTotal(logs = state.logs) {
@@ -364,9 +377,8 @@ function renderToday() {
   el("homeWeekBalance").textContent = formatMoney(weekBalance, true);
   el("homeWeekBalance").classList.toggle("negative", weekBalance < 0);
   el("todayAttempts").textContent = todayActions;
-  el("todayLimit").textContent = ` / ${DAILY_ACTION_GOAL}`;
   el("trainingStatus").textContent = todayActions >= COMPLETE_ACTION_GOAL
-    ? "今日 5 次出手 · 完整训练已点亮"
+    ? "今日 5 次出手 · 蓝色进阶已点亮"
     : todayActions >= DAILY_ACTION_GOAL
       ? `今日已出手${todayRejections ? ` · 收到 ${todayRejections} 次拒绝` : ""}`
       : `本周 ${actionDays.length} / ${WEEKLY_ACTION_DAYS} 个出手日`;
@@ -399,15 +411,17 @@ function renderToday() {
 
   const rewardClaimed = isRewardClaimed();
   el("rewardLabel").textContent = state.settings.rewardLabel;
-  el("rewardValue").textContent = Number(state.settings.rewardAmount) > 0
-    ? `真实预算 ¥${Number(state.settings.rewardAmount).toFixed(0)} · 不计算虚构省钱`
-    : "时间型奖赏 · 真实兑现";
+  const rewardAmount = Number(state.settings.rewardAmount);
+  el("rewardValue").textContent = rewardAmount > 0
+    ? `真实预算 ¥${rewardAmount.toFixed(0)}`
+    : "";
+  el("rewardValue").classList.toggle("hidden", rewardAmount <= 0);
   el("rewardProgress").style.width = `${Math.min(100, (actionDays.length / WEEKLY_ACTION_DAYS) * 100)}%`;
   el("rewardState").textContent = rewardClaimed
     ? "本周已经兑现"
     : targetMet
       ? "已解锁，可以兑现"
-      : `本周 ${WEEKLY_ACTION_DAYS} 天都有一次真实出手后兑现`;
+      : "本周每天都出手一次";
   el("claimRewardButton").classList.toggle("hidden", !targetMet || rewardClaimed);
 }
 
@@ -487,46 +501,46 @@ function cardSymbol(card, visualIndex = Number(card.pattern) % 16) {
 
 function cardBackMessage(card, index) {
   const common = [
-    "这一步由我选择，不由恐惧代劳。",
-    "我先行动，再让情绪慢慢跟上。",
-    "一次开口，给大脑一次新证据。",
-    "我没有等到完美状态才开始。",
-    "今天的我，比预测多走了一步。",
-    "结果未知，行动已经真实发生。",
-    "我把脑内推演换成了现实经验。",
-    "紧张没有消失，我仍然能行动。",
-    "我练习主动，也练习尊重答案。",
-    "这张卡证明：我可以开始。",
-    "我允许心跳加快，也允许自己向前。",
-    "行动不是审判，只是一次练习。",
-    "我把机会交给现实，不交给想象。",
-    "我没有要求成功，只要求亲自选择。",
-    "今天积累的，是下一次更自然的开始。",
-    "一个真实动作，正在改写旧反应。",
-    "我能靠近，也能保留彼此的空间。",
-    "被看见并不可怕，我仍是完整的。",
-    "我不需要控制回应，只需要守住真诚。",
-    "这一次不是胜负，是能力的重复。",
-    "我让勇气留下了可以翻看的证据。",
-    "我完成的是出手，不是讨好。",
-    "恐惧说停下时，我仍保留选择权。",
-    "今天这一小步，会成为以后的一部分。"
+    "我主动创造了一次真实机会。",
+    "我迎着紧张向前，并完成开口。",
+    "今天的行动力又增长了一格。",
+    "我把想法变成了真正的行动。",
+    "我敢于开始，也越来越有底气。",
+    "我正在练成随时向前一步的能力。",
+    "这次出手，让下一次更加自然。",
+    "我的主动性正在一次次变强。",
+    "我用行动打开了新的可能。",
+    "今天的我，成功跨过了犹豫。",
+    "我带着心跳向前，也带回了经验。",
+    "每一次开口都在升级我的能力。",
+    "我把机会握在了自己手里。",
+    "我亲自选择行动，并完成行动。",
+    "今天积累的是更强的行动惯性。",
+    "一个真实动作正在扩大我的自由。",
+    "我主动靠近，也始终尊重边界。",
+    "我敢于被看见，也敢于表达自己。",
+    "我的真诚和行动都已经发生。",
+    "这一次练习，让我的能力更扎实。",
+    "我让勇气变成了看得见的证据。",
+    "我完成了出手，也赢过了回避。",
+    "我把选择权牢牢留在自己手中。",
+    "今天这一小步正在累积成实力。"
   ];
   const exits = [
-    "我听懂了她的答案，也从容结束。",
-    "自然离开，让这次行动保持完整。",
-    "尊重拒绝，也是我正在增长的能力。",
-    "我没有纠缠，所以这仍是一张勇气卡。",
-    "没有继续，不等于这一步没有价值。",
-    "我守住边界，也守住了自己的体面。"
+    "拒绝出现，我依旧完成了主动行动。",
+    "我接住一次拒绝，也增强一次底气。",
+    "这次挑战变成了我的行动经验。",
+    "我敢于尝试，所以今天已经赢过回避。",
+    "我把拒绝变成经验，把行动变成实力。",
+    "越过这一关，下一次我会更敢开口。"
   ];
   const groups = [
-    "旁人的目光没有替我做决定。",
-    "人多让挑战变大，也让这张卡更真实。",
-    "我穿过了被注视的感觉，仍然开了口。",
-    "组合场景更难，但我已经拥有一次证据。",
-    "我面对的不只是一人，也没有后退。",
-    "环境更复杂，我依然保持自然和边界。"
+    "旁人在场，我依然主动完成了开口。",
+    "更大的挑战，练出了更强的行动力。",
+    "我穿过被注视的感觉，成功迈出一步。",
+    "组合场景提升了这次行动的含金量。",
+    "面对多人，我依旧把握住了机会。",
+    "环境越复杂，我越能练出稳定和自然。"
   ];
   const pool = card.fundGroup === "companion" || card.fundGroup === "group"
     ? [...groups, ...common]
@@ -564,7 +578,7 @@ function renderCards() {
             </span>
             <span class="card-meta">
               <span>${escapeHtml(card.context)} · ${escapeHtml(COURAGE_FUND_GROUPS[card.fundGroup] || "同行情况未记录")} · 焦虑 ${card.anxietyBefore} → ${card.anxietyAfter}</span>
-              <span>${escapeHtml(OUTCOME_LABELS[card.kind])} · +${card.points} 点${Number(card.fundAmount) > 0 ? ` · +${formatMoney(card.fundAmount)}` : ""}</span>
+              <span>${escapeHtml(card.kind === "graceful_exit" ? "接住拒绝 · 主动出手已完成" : OUTCOME_LABELS[card.kind])} · +${card.points} 点${Number(card.fundAmount) > 0 ? ` · +${formatMoney(card.fundAmount)}` : ""}</span>
               <span class="card-evidence">${escapeHtml(card.evidence)}</span>
             </span>
           </span>
@@ -602,7 +616,7 @@ function renderAttemptTrend(actions) {
 
   el("attemptTrendTotal").textContent = `${sorted.length} 次`;
   if (!sorted.length) {
-    chart.innerHTML = `<div class="empty-state">本周还没有真实出手。完成一次主动交流或礼貌退出后，曲线会从这里向上一级。</div>`;
+    chart.innerHTML = `<div class="empty-state">本周还没有真实出手。</div>`;
     return;
   }
 
@@ -681,7 +695,7 @@ function renderReview() {
           <span class="reason-bar"><i style="width:${(count / maxReason) * 100}%"></i></span>
           <strong>${count}</strong>
         </div>`).join("")
-    : `<div class="empty-state">本周还没有回避记录。这里不会惩罚你，只会帮助你识别反复出现的想法。</div>`;
+    : `<div class="empty-state">本周还没有回避记录。这里可以帮助你识别反复出现的回避想法。</div>`;
 
   const topReasonKey = sortedReasons[0]?.[0];
   el("ifThenPlan").innerHTML = topReasonKey
@@ -745,29 +759,29 @@ function renderExpenses() {
   el("expenseList").innerHTML = expenses.length
     ? [...expenses].reverse().map((item) => `
         <article class="expense-item">
-          <div><strong>${escapeHtml(item.category)}</strong><small>${escapeHtml(item.note || "无备注")}</small></div>
+          <div><strong>${escapeHtml(item.category)}</strong></div>
           <span>¥${Number(item.amount).toFixed(2)} · ${escapeHtml(formatShortDate(item.createdAt))}</span>
         </article>`).join("")
     : "";
 
-  const incomeLogs = [...actionLogs()]
-    .filter((log) => Number(log.fundAmount) > 0)
-    .reverse()
-    .slice(0, 10);
-  el("fundIncomeSection").hidden = incomeLogs.length === 0;
-  el("fundIncomeList").innerHTML = incomeLogs.length
-    ? incomeLogs.map((log) => {
-        const group = COURAGE_FUND_GROUPS[log.fundGroup] || "同行情况未记录";
-        const composition = log.fundGroup !== "solo" && log.groupComposition && log.groupComposition !== "unspecified"
-          ? ` · ${GROUP_COMPOSITIONS[log.groupComposition]}`
-          : "";
-        return `<article class="fund-income-item">
-          <i aria-hidden="true">＋</i>
-          <div><strong>${escapeHtml(log.context || "场景未记录")} · ${escapeHtml(group)}</strong><small>${escapeHtml(formatShortDate(log.createdAt))}${escapeHtml(composition)}</small></div>
-          <span>+${formatMoney(log.fundAmount)}</span>
-        </article>`;
-      }).join("")
-    : "";
+  const actions = actionLogs();
+  const countBy = (getLabel) => actions.reduce((counts, log) => {
+    const label = getLabel(log);
+    counts[label] = (counts[label] || 0) + 1;
+    return counts;
+  }, {});
+  const renderCounts = (counts) => {
+    const entries = Object.entries(counts).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "zh-CN"));
+    return entries.length
+      ? entries.map(([label, count]) => `<div><span>${escapeHtml(label)}</span><strong>${count}</strong></div>`).join("")
+      : `<div class="compact-stat-empty">尚无记录</div>`;
+  };
+  el("ledgerContextStats").innerHTML = renderCounts(countBy((log) => log.context || "场景未记录"));
+  el("ledgerTargetStats").innerHTML = renderCounts(countBy((log) => {
+    const level = COURAGE_FUND_LEVELS[log.fundLevel] || "心动程度未记录";
+    const group = COURAGE_FUND_GROUPS[log.fundGroup] || "同行情况未记录";
+    return `${level} · ${group}`;
+  }));
 }
 
 function renderAll() {
@@ -903,7 +917,8 @@ function renderTrainingDialog() {
   }
 
   if (trainingFlow.stage === "action-detail") {
-    const fundAmount = courageFundAmount(trainingFlow.fundLevel, trainingFlow.fundGroup);
+    const fundAmount = availableCourageFundAmount(trainingFlow.fundLevel, trainingFlow.fundGroup);
+    const fundCapReached = fundAmount === 0 && actionLogs().filter((log) => dateKey(new Date(log.createdAt)) === dateKey()).length >= COMPLETE_ACTION_GOAL;
     content.innerHTML = `
       <form class="dialog-step" id="actionDetailForm">
         <p class="eyebrow">生成一张新勇气卡</p>
@@ -911,7 +926,7 @@ function renderTrainingDialog() {
         <div class="fund-config">
           <div class="fund-config-heading">
             <span>事后记录本次挑战档位</span>
-            <strong id="fundPreview" aria-live="polite">+${formatMoney(fundAmount)}</strong>
+            <strong id="fundPreview" aria-live="polite">${fundCapReached ? "今日已满，不再累计" : `+${formatMoney(fundAmount)}`}</strong>
           </div>
           <div class="fund-config-grid">
             <label>
@@ -1013,7 +1028,7 @@ function renderTrainingDialog() {
           <div><span>本周勇气储备</span><strong>${formatMoney(weekFund)}</strong></div>
           <div><span>当前本周净额</span><strong>${formatMoney(weekBalance, true)}</strong></div>
         </div>
-        <p class="reward-progress-copy">今日已真实出手 ${todayActions} 次${todayActions >= COMPLETE_ACTION_GOAL ? " · 绿色完整训练已点亮" : " · 蓝色行动底已点亮"}${todayRejections ? `；其中 ${todayRejections} 次拒绝已记为暗金描边` : ""}</p>
+        <p class="reward-progress-copy">今日已真实出手 ${todayActions} 次${todayActions >= COMPLETE_ACTION_GOAL ? " · 蓝色进阶已点亮" : " · 绿色行动底已点亮"}${todayRejections ? `；其中 ${todayRejections} 次拒绝已记为暗金描边` : ""}</p>
         <button class="primary-action" id="rewardLedgerButton" type="button">查看刚刚入账</button>
         <button class="secondary-action" id="viewCardButton" type="button">去卡册翻开它</button>
         <button class="text-button" id="finishTrainingButton" type="button">完成本次记录</button>
@@ -1042,8 +1057,9 @@ function updateFundPreview() {
   const compositionField = el("groupCompositionField");
   compositionField?.classList.toggle("hidden", trainingFlow.fundGroup === "solo");
   if (trainingFlow.fundGroup === "solo") trainingFlow.groupComposition = "unspecified";
-  const amount = courageFundAmount(trainingFlow.fundLevel, trainingFlow.fundGroup);
-  el("fundPreview").textContent = `+${formatMoney(amount)}`;
+  const amount = availableCourageFundAmount(trainingFlow.fundLevel, trainingFlow.fundGroup);
+  const fundCapReached = amount === 0 && actionLogs().filter((log) => dateKey(new Date(log.createdAt)) === dateKey()).length >= COMPLETE_ACTION_GOAL;
+  el("fundPreview").textContent = fundCapReached ? "今日已满，不再累计" : `+${formatMoney(amount)}`;
 }
 
 function saveSimpleLog(kind) {
@@ -1074,29 +1090,30 @@ function cardRarity(anxietyBefore) {
 
 function cardQuote(kind, index) {
   const common = [
-    "我练习的是选择，不是胜负。",
-    "勇气不是不紧张，是仍然向前一步。",
-    "一次真实行动，胜过十次脑内推演。",
-    "结果属于双方，行动属于我。",
-    "我可以真诚靠近，也可以从容离开。",
-    "拒绝不是审判，只是两个人此刻不匹配。",
-    "我不需要等焦虑同意，才允许自己行动。",
-    "真实世界的一个答案，胜过脑内的一百种预测。",
-    "我能承受不确定，也能保持真诚。",
-    "行动让我增长，回应不定义我的价值。",
-    "今天不是证明自己，而是扩展自己的选择。",
-    "每一次自然开口，都在削弱自动回避。",
-    "我只负责表达，不负责安排结果。",
-    "我愿意被现实校准，而不是被恐惧说服。",
-    "紧张是一种感觉，不是一道禁令。",
-    "我把注意力带回当下，然后完成一步。",
-    "勇气可以很小，但必须是真实发生的。",
-    "我正在练习一种以后会感谢自己的能力。"
+    "我主动选择机会，也主动创造可能。",
+    "我带着紧张向前，行动依然漂亮完成。",
+    "一次真实出手，胜过十次脑内推演。",
+    "行动属于我，成长也属于我。",
+    "我真诚靠近，也稳稳守住边界。",
+    "每次出手都在增强我的行动肌肉。",
+    "我无需等待焦虑许可，现在就能行动。",
+    "真实经验正在快速扩展我的能力。",
+    "我能拥抱不确定，也能保持真诚。",
+    "行动让我增长，勇气让我自由。",
+    "今天我正在扩展自己的选择。",
+    "每一次自然开口，都在强化主动本能。",
+    "我负责表达，也享受行动本身。",
+    "我用现实经验持续升级自己。",
+    "心跳加快，正说明我在突破边界。",
+    "我把注意力带回当下，果断完成一步。",
+    "勇气已经真实发生，并留下证据。",
+    "我正在练成一项会长期受益的能力。"
   ];
   const exits = [
-    "我尊重她的答案，也守住自己的完整。",
-    "自然离开不是失败，是边界感。",
-    "这次没有继续，但我没有被恐惧替我选择。"
+    "我接住一次拒绝，也完成一次升级。",
+    "拒绝增加训练重量，行动增长我的力量。",
+    "我迎难而上，今天的主动性再次获胜。",
+    "一次拒绝，就是一次更强的行动耐受。"
   ];
   const pool = kind === "graceful_exit" ? [...exits, ...common] : common;
   return pool[index % pool.length];
@@ -1104,8 +1121,8 @@ function cardQuote(kind, index) {
 
 function generateEvidence(kind, before, after) {
   if (kind === "graceful_exit") {
-    if (after < before) return `我承受了没有得到期待回应的时刻，并自然离开；焦虑从 ${before} 降到 ${after}。`;
-    return "即使没有得到期待的回应，我也保持边界并完成离开；难受和行动可以同时存在。";
+    if (after < before) return `我主动出手并接住了一次拒绝；焦虑从 ${before} 降到 ${after}，行动耐受正在增长。`;
+    return "我主动出手并接住了一次拒绝；即使焦虑还在，我依旧完成了行动。";
   }
   if (after < before) return `行动后焦虑从 ${before} 降到 ${after}；开始往往比脑内预测更可控。`;
   if (after === before) return `焦虑仍是 ${after}，但我没有等待它消失才行动。`;
@@ -1123,7 +1140,7 @@ function saveActionLog(event) {
   const note = el("trainingNote").value.trim();
   const basePoints = 3;
   const points = basePoints + (before >= 6 ? 1 : 0);
-  const fundAmount = courageFundAmount(trainingFlow.fundLevel, trainingFlow.fundGroup);
+  const fundAmount = availableCourageFundAmount(trainingFlow.fundLevel, trainingFlow.fundGroup);
   const now = new Date().toISOString();
   const cardIndex = state.cards.length;
   const evidence = generateEvidence(trainingFlow.outcome, before, after);
@@ -1289,12 +1306,6 @@ function initEvents() {
   el("installButton").addEventListener("click", installApp);
   el("claimRewardButton").addEventListener("click", claimReward);
   el("exportButton").addEventListener("click", exportData);
-  el("resetButton").addEventListener("click", () => {
-    const confirmed = window.confirm("确定清空所有训练、卡片和账本数据吗？此操作无法撤销。建议先导出数据。");
-    if (!confirmed) return;
-    localStorage.removeItem(STORAGE_KEY);
-    window.location.reload();
-  });
   el("expenseForm").addEventListener("submit", (event) => {
     event.preventDefault();
     const amount = Number(el("expenseAmount").value);
