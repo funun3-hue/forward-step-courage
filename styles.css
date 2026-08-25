@@ -333,7 +333,10 @@ summary:focus-visible {
   margin-top: 4px;
 }
 
-.week-priority,
+.week-priority {
+  margin-top: 2px;
+}
+
 .achievement-priority {
   margin-top: 4px;
 }
