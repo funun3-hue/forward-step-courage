@@ -570,7 +570,7 @@ summary:focus-visible {
   display: flex;
   flex-wrap: wrap;
   gap: 8px 13px;
-  margin-top: 13px;
+  margin-top: 6px;
   color: var(--muted);
   font-size: 0.64rem;
 }
@@ -1642,7 +1642,7 @@ summary:focus-visible {
 }
 
 .ledger-overview {
-  margin-top: 22px;
+  margin-top: 15px;
 }
 
 .lifetime-ledger-stats {
