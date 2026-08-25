@@ -364,8 +364,12 @@ function weekRangeLabel(key) {
   const start = dateFromKey(key);
   const end = new Date(start);
   end.setDate(end.getDate() + 6);
+  const weeksAgo = Math.round((weekStart().getTime() - start.getTime()) / (7 * 24 * 60 * 60 * 1000));
+  if (weeksAgo === 0) return "本周";
+  if (weeksAgo === 1) return "上周";
+  if (weeksAgo === 2) return "上上周";
   const range = `${start.getMonth() + 1}/${start.getDate()}–${end.getMonth() + 1}/${end.getDate()}`;
-  return key === weekKey() ? `本周 ${range}` : range;
+  return range;
 }
 
 function availableWeekKeys() {
