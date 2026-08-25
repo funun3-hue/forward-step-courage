@@ -595,7 +595,6 @@ function openCardDay(dayKey) {
   if (!dayCards.length) return;
   const content = el("cardDayDialogContent");
   content.innerHTML = `
-    <p class="eyebrow">当日收藏</p>
     <h2>${escapeHtml(cardDayHeading(dayCards[0].createdAt, true))}</h2>
     <p class="album-help">共 ${dayCards.length} 张勇气卡 · 点击卡片翻面</p>
     <div class="card-day-grid">${dayCards.map(courageCardMarkup).join("")}</div>`;
@@ -740,22 +739,24 @@ function renderReview() {
     ? `<span>下次的“如果—那么”计划 · ${escapeHtml(REASON_GROUPS[topReasonKey].label)}</span><p>${escapeHtml(REASON_GROUPS[topReasonKey].plan)}</p>`
     : `<span>下次的“如果—那么”计划</span><p>记录一次回避后，这里会根据最常见阻碍生成行动计划。</p>`;
 
-  const contextCounts = actions.reduce((counts, log) => {
-    const context = log.context || "未记录";
-    counts[context] = (counts[context] || 0) + 1;
+  el("contextCount").textContent = `${actions.length} 次记录`;
+  const countBy = (getLabel) => actions.reduce((counts, log) => {
+    const label = getLabel(log);
+    counts[label] = (counts[label] || 0) + 1;
     return counts;
   }, {});
-  const sortedContexts = Object.entries(contextCounts).sort((a, b) => b[1] - a[1]);
-  const maxContext = sortedContexts[0]?.[1] || 1;
-  el("contextCount").textContent = `${actions.length} 次记录`;
-  el("contextChart").innerHTML = sortedContexts.length
-    ? sortedContexts.map(([context, count]) => `
-        <div class="reason-row context-row">
-          <span>${escapeHtml(context)}</span>
-          <span class="reason-bar"><i style="width:${(count / maxContext) * 100}%"></i></span>
-          <strong>${count}</strong>
-        </div>`).join("")
-    : `<div class="empty-state">完成一次搭讪并保存场景后，这里会显示本周的场景分布。</div>`;
+  const renderCounts = (counts) => {
+    const entries = Object.entries(counts).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "zh-CN"));
+    return entries.length
+      ? entries.map(([label, count]) => `<div><span>${escapeHtml(label)}</span><strong>${count}</strong></div>`).join("")
+      : `<div class="compact-stat-empty">尚无记录</div>`;
+  };
+  el("ledgerContextStats").innerHTML = renderCounts(countBy((log) => log.context || "场景未记录"));
+  el("ledgerTargetStats").innerHTML = renderCounts(countBy((log) => {
+    const level = COURAGE_FUND_LEVELS[log.fundLevel] || "心动程度未记录";
+    const group = COURAGE_FUND_GROUPS[log.fundGroup] || "同行情况未记录";
+    return `${level} · ${group}`;
+  }));
 
   const weekCards = currentWeekItems(state.cards);
   el("evidenceList").innerHTML = weekCards.length
@@ -802,24 +803,6 @@ function renderExpenses() {
         </article>`).join("")
     : "";
 
-  const actions = actionLogs();
-  const countBy = (getLabel) => actions.reduce((counts, log) => {
-    const label = getLabel(log);
-    counts[label] = (counts[label] || 0) + 1;
-    return counts;
-  }, {});
-  const renderCounts = (counts) => {
-    const entries = Object.entries(counts).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "zh-CN"));
-    return entries.length
-      ? entries.map(([label, count]) => `<div><span>${escapeHtml(label)}</span><strong>${count}</strong></div>`).join("")
-      : `<div class="compact-stat-empty">尚无记录</div>`;
-  };
-  el("ledgerContextStats").innerHTML = renderCounts(countBy((log) => log.context || "场景未记录"));
-  el("ledgerTargetStats").innerHTML = renderCounts(countBy((log) => {
-    const level = COURAGE_FUND_LEVELS[log.fundLevel] || "心动程度未记录";
-    const group = COURAGE_FUND_GROUPS[log.fundGroup] || "同行情况未记录";
-    return `${level} · ${group}`;
-  }));
 }
 
 function renderAll() {

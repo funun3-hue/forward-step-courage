@@ -204,7 +204,7 @@
           <section class="section-block" aria-labelledby="expenseFormHeading">
             <div class="section-heading">
               <div>
-                <h2 id="expenseFormHeading">记录吃饭以外的真实开销</h2>
+                <h2 id="expenseFormHeading">记录三餐及日常活动以外的真实开销</h2>
               </div>
             </div>
             <form class="expense-form" id="expenseForm">
@@ -219,7 +219,6 @@
                   <option>餐饮</option>
                   <option>娱乐</option>
                   <option>购物</option>
-                  <option>奖赏兑现</option>
                   <option>其他</option>
                 </select>
               </label>
@@ -250,32 +249,26 @@
             </div>
           </section>
 
-          <section class="section-block" id="actionBreakdownSection" aria-label="行动分类统计">
-            <div class="ledger-breakdowns">
-              <section class="ledger-breakdown" aria-labelledby="ledgerContextHeading">
-                <h3 id="ledgerContextHeading">场所统计</h3>
-                <div class="compact-stat-list" id="ledgerContextStats"></div>
-              </section>
-              <section class="ledger-breakdown" aria-labelledby="ledgerTargetHeading">
-                <h3 id="ledgerTargetHeading">搭讪对象统计</h3>
-                <div class="compact-stat-list" id="ledgerTargetStats"></div>
-              </section>
-            </div>
-          </section>
-
         </section>
 
         <section class="view" id="reviewView" data-title="本周复盘">
+          <section class="section-block review-priority" aria-labelledby="historyHeading">
+            <div class="section-heading">
+              <div>
+                <h2 id="historyHeading">本周行为统计</h2>
+              </div>
+            </div>
+            <div class="history-list" id="historyList"></div>
+          </section>
+
           <section class="section-block attempt-trend-section" aria-labelledby="attemptTrendHeading">
             <div class="section-heading">
               <div>
-                <p class="eyebrow">只累计真实出手</p>
                 <h2 id="attemptTrendHeading">本周累计出手曲线</h2>
               </div>
               <span id="attemptTrendTotal">0 次</span>
             </div>
             <div class="attempt-trend-chart" id="attemptTrendChart"></div>
-            <p class="form-hint">每次真实主动交流或礼貌退出，曲线向上一级。</p>
           </section>
 
           <section class="section-block" aria-labelledby="reasonHeading">
@@ -310,17 +303,16 @@
               </div>
               <span id="contextCount">0 次记录</span>
             </div>
-            <div class="reason-chart" id="contextChart"></div>
-            <p class="form-hint">保存场景类别，帮你总结哪些公共场景更适合自然交流。</p>
-          </section>
-
-          <section class="section-block" aria-labelledby="historyHeading">
-            <div class="section-heading">
-              <div>
-                <h2 id="historyHeading">本周行为统计</h2>
-              </div>
+            <div class="ledger-breakdowns" id="actionBreakdownSection" aria-label="行动分类统计">
+              <section class="ledger-breakdown" aria-labelledby="ledgerContextHeading">
+                <h3 id="ledgerContextHeading">场所统计</h3>
+                <div class="compact-stat-list" id="ledgerContextStats"></div>
+              </section>
+              <section class="ledger-breakdown" aria-labelledby="ledgerTargetHeading">
+                <h3 id="ledgerTargetHeading">搭讪对象统计</h3>
+                <div class="compact-stat-list" id="ledgerTargetStats"></div>
+              </section>
             </div>
-            <div class="history-list" id="historyList"></div>
           </section>
         </section>
       </main>
