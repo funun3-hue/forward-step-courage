@@ -195,7 +195,6 @@
 
         <section class="view" id="ledgerView" data-title="勇气账本">
           <section class="ledger-hero" aria-labelledby="ledgerHeading">
-            <p class="eyebrow">让奖励信号一直留在眼前</p>
             <span>当前累计净额</span>
             <h2 id="ledgerHeading"><strong id="fundBalanceTotal">¥0.00</strong></h2>
             <p id="ledgerActionSummary">还没有行动入账。第一笔会从真实出手开始。</p>
@@ -271,6 +270,26 @@
             <div class="attempt-trend-chart" id="attemptTrendChart"></div>
           </section>
 
+          <section class="section-block" aria-labelledby="contextHeading">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">场景复盘</p>
+                <h2 id="contextHeading">本周搭讪场景</h2>
+              </div>
+              <span id="contextCount">0 次记录</span>
+            </div>
+            <div class="ledger-breakdowns" id="actionBreakdownSection" aria-label="行动分类统计">
+              <section class="ledger-breakdown" aria-labelledby="ledgerContextHeading">
+                <h3 id="ledgerContextHeading">场所统计</h3>
+                <div class="compact-stat-list" id="ledgerContextStats"></div>
+              </section>
+              <section class="ledger-breakdown" aria-labelledby="ledgerTargetHeading">
+                <h3 id="ledgerTargetHeading">搭讪对象统计</h3>
+                <div class="compact-stat-list" id="ledgerTargetStats"></div>
+              </section>
+            </div>
+          </section>
+
           <section class="section-block" aria-labelledby="reasonHeading">
             <div class="section-heading">
               <div>
@@ -295,25 +314,6 @@
             <div class="evidence-list" id="evidenceList"></div>
           </section>
 
-          <section class="section-block" aria-labelledby="contextHeading">
-            <div class="section-heading">
-              <div>
-                <p class="eyebrow">场景复盘</p>
-                <h2 id="contextHeading">本周搭讪场景</h2>
-              </div>
-              <span id="contextCount">0 次记录</span>
-            </div>
-            <div class="ledger-breakdowns" id="actionBreakdownSection" aria-label="行动分类统计">
-              <section class="ledger-breakdown" aria-labelledby="ledgerContextHeading">
-                <h3 id="ledgerContextHeading">场所统计</h3>
-                <div class="compact-stat-list" id="ledgerContextStats"></div>
-              </section>
-              <section class="ledger-breakdown" aria-labelledby="ledgerTargetHeading">
-                <h3 id="ledgerTargetHeading">搭讪对象统计</h3>
-                <div class="compact-stat-list" id="ledgerTargetStats"></div>
-              </section>
-            </div>
-          </section>
         </section>
       </main>
 
