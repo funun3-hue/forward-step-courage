@@ -157,7 +157,7 @@ summary:focus-visible {
 .hero-card {
   position: relative;
   overflow: hidden;
-  min-height: 380px;
+  min-height: 0;
   padding: 24px;
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: var(--radius-xl);
@@ -221,7 +221,7 @@ summary:focus-visible {
 .hero-momentum {
   position: relative;
   z-index: 1;
-  margin: 26px 0 28px;
+  margin: 14px 0 20px;
 }
 
 .hero-momentum h2 {
@@ -237,9 +237,11 @@ summary:focus-visible {
   position: relative;
   z-index: 1;
   display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  margin: 58px 0 0;
+  min-height: 48px;
+  align-items: center;
+  justify-content: flex-start;
+  margin: 3px 0 0;
+  padding-right: 76px;
   color: var(--muted);
   font-size: 0.8rem;
 }
@@ -733,7 +735,7 @@ summary:focus-visible {
 }
 
 .map-intro {
-  padding: 34px 4px 20px;
+  padding: 10px 4px 16px;
 }
 
 .map-intro p:last-child {
@@ -970,6 +972,58 @@ summary:focus-visible {
 }
 
 .card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.card-date-group {
+  position: relative;
+  display: grid;
+  min-height: 132px;
+  align-content: space-between;
+  justify-items: start;
+  padding: 16px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 18px;
+  color: #fff;
+  text-align: left;
+  box-shadow: 0 16px 35px rgba(1, 5, 15, 0.25);
+}
+
+.card-date-group::after {
+  position: absolute;
+  right: -22px;
+  bottom: -34px;
+  width: 100px;
+  height: 100px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 50%;
+  content: "";
+}
+
+.card-date-group > span {
+  font-size: 0.7rem;
+  letter-spacing: 0.05em;
+}
+
+.card-date-group > strong {
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.card-date-group > strong small {
+  font-size: 0.68rem;
+}
+
+.card-date-group > em {
+  color: rgba(255, 255, 255, 0.76);
+  font-size: 0.64rem;
+  font-style: normal;
+}
+
+.card-day-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
@@ -1593,6 +1647,7 @@ summary:focus-visible {
 
 .ledger-breakdowns {
   display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
 }
 
@@ -1610,6 +1665,7 @@ summary:focus-visible {
 
 .compact-stat-list {
   display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(88px, 1fr));
   gap: 7px;
 }
 
@@ -1617,8 +1673,8 @@ summary:focus-visible {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 14px;
-  padding: 9px 10px;
+  gap: 8px;
+  padding: 8px 9px;
   border-radius: 11px;
   background: rgba(255, 255, 255, 0.035);
 }
@@ -1644,13 +1700,13 @@ summary:focus-visible {
 
 .fund-ledger-summary {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 9px;
   margin: 16px 0 10px;
 }
 
 .fund-stat-primary {
-  grid-column: 1 / -1;
+  grid-column: auto;
 }
 
 .fund-stat {
@@ -1818,6 +1874,14 @@ textarea::placeholder {
 .sheet h2 {
   max-width: 84%;
   margin-bottom: 18px;
+}
+
+.card-day-sheet {
+  width: min(calc(100% - 18px), 620px);
+}
+
+.card-day-sheet .album-help {
+  margin: -8px 0 20px;
 }
 
 .sheet form {
@@ -2410,12 +2474,12 @@ input[type="range"] {
   }
 
   .hero-card {
-    min-height: 420px;
+    min-height: 0;
     padding: 20px;
   }
 
   .hero-momentum {
-    margin-top: 24px;
+    margin-top: 12px;
   }
 
   .level-pill span:first-child {
@@ -2432,7 +2496,8 @@ input[type="range"] {
     text-align: left;
   }
 
-  .card-grid {
+  .card-grid,
+  .card-day-grid {
     gap: 10px;
   }
 

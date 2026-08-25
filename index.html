@@ -52,7 +52,6 @@
             </div>
             <div class="today-count">
               <span class="today-label">今日实际出手<small><b id="heroFundTotal">¥0.00</b> 勇气储备</small></span>
-              <strong><span id="todayAttempts">0</span></strong>
             </div>
             <section class="hero-momentum" aria-labelledby="momentumHeading">
               <h2 id="momentumHeading">本周正反馈</h2>
@@ -92,7 +91,7 @@
         <section class="view" id="mapView" data-title="勇气地图">
           <section class="map-intro">
             <h2>每次行动，为内心世界点一盏灯</h2>
-            <p>这是一张象征性的成长地图。区域代表能力，而不是你在哪里遇见了谁。</p>
+            <p>这是一张象征性的成长地图。</p>
           </section>
 
           <div class="world-map-card">
@@ -217,6 +216,7 @@
                 <span>类别</span>
                 <select id="expenseCategory">
                   <option>交通</option>
+                  <option>餐饮</option>
                   <option>娱乐</option>
                   <option>购物</option>
                   <option>奖赏兑现</option>
@@ -311,7 +311,7 @@
               <span id="contextCount">0 次记录</span>
             </div>
             <div class="reason-chart" id="contextChart"></div>
-            <p class="form-hint">只保存场景类别，不保存具体位置或对方信息；用来发现哪些公共场景更适合自然交流。</p>
+            <p class="form-hint">保存场景类别，帮你总结哪些公共场景更适合自然交流。</p>
           </section>
 
           <section class="section-block" aria-labelledby="historyHeading">
@@ -356,7 +356,6 @@
       <form id="settingsForm">
         <p class="eyebrow">训练设置</p>
         <h2>让规则适合真实生活</h2>
-        <p class="form-hint">固定目标：每天真实出手 1 次即以绿色点亮当天，5 次及以上升级为蓝色；拒绝1–4次增加暗金边，达到5次升级为闪亮金边。没有顺延，也不会因为漏一天清零。</p>
         <label>
           <span>当前训练阶梯</span>
           <select id="ladderLevelInput"></select>
@@ -367,11 +366,7 @@
           <span>完成本周目标后，我会兑现</span>
           <input id="rewardLabelInput" maxlength="40" required />
         </label>
-        <label>
-          <span>实际金额（没有花钱就填 0）</span>
-          <input id="rewardAmountInput" type="number" min="0" step="1" inputmode="decimal" />
-        </label>
-        <p class="form-hint">奖赏也可以是一段真正想要的自由时间。这里不计算“本来不会花的钱”。</p>
+        <p class="form-hint">奖赏也可以是一段真正想要的自由时间</p>
         <button class="primary-action" type="submit">保存设置</button>
         <div class="data-actions">
           <button class="text-button" id="exportButton" type="button">导出本地数据</button>
@@ -390,6 +385,12 @@
         <li>以后从桌面图标打开；训练与卡片数据保存在当前浏览器本机。</li>
       </ol>
       <p class="form-hint">桌面图标若带蓝色小闪电，表示华为浏览器正以 PWA/快应用方式创建快捷入口，属于正常现象。</p>
+    </dialog>
+
+    <dialog class="sheet card-day-sheet" id="cardDayDialog">
+      <div class="sheet-handle" aria-hidden="true"></div>
+      <button class="sheet-close" id="closeCardDayButton" type="button" aria-label="关闭">×</button>
+      <div id="cardDayDialogContent"></div>
     </dialog>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>

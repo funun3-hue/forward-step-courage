@@ -376,7 +376,6 @@ function renderToday() {
   el("homeWeekFund").textContent = formatMoney(weekFund);
   el("homeWeekBalance").textContent = formatMoney(weekBalance, true);
   el("homeWeekBalance").classList.toggle("negative", weekBalance < 0);
-  el("todayAttempts").textContent = todayActions;
   el("trainingStatus").textContent = todayActions >= COMPLETE_ACTION_GOAL
     ? "今日 5 次出手 · 蓝色进阶已点亮"
     : todayActions >= DAILY_ACTION_GOAL
@@ -411,11 +410,8 @@ function renderToday() {
 
   const rewardClaimed = isRewardClaimed();
   el("rewardLabel").textContent = state.settings.rewardLabel;
-  const rewardAmount = Number(state.settings.rewardAmount);
-  el("rewardValue").textContent = rewardAmount > 0
-    ? `真实预算 ¥${rewardAmount.toFixed(0)}`
-    : "";
-  el("rewardValue").classList.toggle("hidden", rewardAmount <= 0);
+  el("rewardValue").textContent = "";
+  el("rewardValue").classList.add("hidden");
   el("rewardProgress").style.width = `${Math.min(100, (actionDays.length / WEEKLY_ACTION_DAYS) * 100)}%`;
   el("rewardState").textContent = rewardClaimed
     ? "本周已经兑现"
@@ -550,6 +546,63 @@ function cardBackMessage(card, index) {
   return pool[Math.max(0, index) % pool.length];
 }
 
+function cardDayHeading(value, includeYear = false) {
+  const date = new Date(value);
+  return `${includeYear ? `${date.getFullYear()}年` : ""}${date.getMonth() + 1}月${date.getDate()}日`;
+}
+
+function courageCardMarkup(card) {
+  const chronologicalIndex = Math.max(0, state.cards.findIndex((item) => item.id === card.id));
+  const visualIndex = chronologicalIndex % 16;
+  return `
+    <button class="courage-card" type="button" aria-label="翻开${escapeHtml(card.title)}" aria-pressed="false">
+      <span class="card-inner">
+        <span class="card-face card-back pattern-${visualIndex}">
+          <span class="card-rarity">${escapeHtml(card.rarity)} · 勇气卡</span>
+          <span class="card-emblem">${cardSymbol(card, visualIndex)}</span>
+          <span class="card-back-bottom"><span class="card-date">${escapeHtml(formatShortDate(card.createdAt))}</span><strong>${escapeHtml(cardBackMessage(card, chronologicalIndex))}</strong></span>
+        </span>
+        <span class="card-face card-front">
+          <span>
+            <span class="card-rarity">${escapeHtml(card.rarity)} · 新证据</span>
+            <h3>${escapeHtml(card.title)}</h3>
+            <blockquote>${escapeHtml(card.quote)}</blockquote>
+          </span>
+          <span class="card-meta">
+            <span>${escapeHtml(card.context)} · ${escapeHtml(COURAGE_FUND_GROUPS[card.fundGroup] || "同行情况未记录")} · 焦虑 ${card.anxietyBefore} → ${card.anxietyAfter}</span>
+            <span>${escapeHtml(card.kind === "graceful_exit" ? "接住拒绝 · 主动出手已完成" : OUTCOME_LABELS[card.kind])} · +${card.points} 点${Number(card.fundAmount) > 0 ? ` · +${formatMoney(card.fundAmount)}` : ""}</span>
+            <span class="card-evidence">${escapeHtml(card.evidence)}</span>
+          </span>
+        </span>
+      </span>
+    </button>`;
+}
+
+function bindCardFlips(container) {
+  container.querySelectorAll(".courage-card").forEach((card) => {
+    card.addEventListener("click", () => {
+      const flipped = card.classList.toggle("flipped");
+      card.setAttribute("aria-pressed", String(flipped));
+      if (flipped) vibrate(18);
+    });
+  });
+}
+
+function openCardDay(dayKey) {
+  const dayCards = state.cards
+    .filter((card) => dateKey(new Date(card.createdAt)) === dayKey)
+    .reverse();
+  if (!dayCards.length) return;
+  const content = el("cardDayDialogContent");
+  content.innerHTML = `
+    <p class="eyebrow">当日收藏</p>
+    <h2>${escapeHtml(cardDayHeading(dayCards[0].createdAt, true))}</h2>
+    <p class="album-help">共 ${dayCards.length} 张勇气卡 · 点击卡片翻面</p>
+    <div class="card-day-grid">${dayCards.map(courageCardMarkup).join("")}</div>`;
+  bindCardFlips(content);
+  el("cardDayDialog").showModal();
+}
+
 function renderCards() {
   el("cardCount").textContent = state.cards.length;
   if (!state.cards.length) {
@@ -557,42 +610,27 @@ function renderCards() {
     return;
   }
 
-  const reversedCards = [...state.cards].reverse();
-  el("cardGrid").innerHTML = reversedCards
-    .map((card, displayIndex) => {
-      const chronologicalIndex = reversedCards.length - 1 - displayIndex;
-      const visualIndex = chronologicalIndex % 16;
-      return `
-      <button class="courage-card" type="button" aria-label="翻开${escapeHtml(card.title)}" aria-pressed="false">
-        <span class="card-inner">
-          <span class="card-face card-back pattern-${visualIndex}">
-            <span class="card-rarity">${escapeHtml(card.rarity)} · 勇气卡</span>
-            <span class="card-emblem">${cardSymbol(card, visualIndex)}</span>
-            <span class="card-back-bottom"><span class="card-date">${escapeHtml(formatShortDate(card.createdAt))}</span><strong>${escapeHtml(cardBackMessage(card, reversedCards.length - 1 - displayIndex))}</strong></span>
-          </span>
-          <span class="card-face card-front">
-            <span>
-              <span class="card-rarity">${escapeHtml(card.rarity)} · 新证据</span>
-              <h3>${escapeHtml(card.title)}</h3>
-              <blockquote>${escapeHtml(card.quote)}</blockquote>
-            </span>
-            <span class="card-meta">
-              <span>${escapeHtml(card.context)} · ${escapeHtml(COURAGE_FUND_GROUPS[card.fundGroup] || "同行情况未记录")} · 焦虑 ${card.anxietyBefore} → ${card.anxietyAfter}</span>
-              <span>${escapeHtml(card.kind === "graceful_exit" ? "接住拒绝 · 主动出手已完成" : OUTCOME_LABELS[card.kind])} · +${card.points} 点${Number(card.fundAmount) > 0 ? ` · +${formatMoney(card.fundAmount)}` : ""}</span>
-              <span class="card-evidence">${escapeHtml(card.evidence)}</span>
-            </span>
-          </span>
-        </span>
-      </button>`;
-    })
-    .join("");
+  const groups = [...state.cards].reverse().reduce((result, card) => {
+    const key = dateKey(new Date(card.createdAt));
+    const group = result.find((item) => item.key === key);
+    if (group) group.cards.push(card);
+    else result.push({ key, cards: [card] });
+    return result;
+  }, []);
 
-  document.querySelectorAll(".courage-card").forEach((card) => {
-    card.addEventListener("click", () => {
-      const flipped = card.classList.toggle("flipped");
-      card.setAttribute("aria-pressed", String(flipped));
-      if (flipped) vibrate(18);
-    });
+  el("cardGrid").innerHTML = groups.map((group) => {
+    const latestCard = group.cards[0];
+    const chronologicalIndex = Math.max(0, state.cards.findIndex((item) => item.id === latestCard.id));
+    return `
+      <button class="card-date-group pattern-${chronologicalIndex % 16}" type="button" data-card-day="${escapeHtml(group.key)}" aria-label="查看${escapeHtml(cardDayHeading(latestCard.createdAt))}收集的${group.cards.length}张勇气卡">
+        <span>${escapeHtml(cardDayHeading(latestCard.createdAt))}</span>
+        <strong>${group.cards.length}<small> 张</small></strong>
+        <em>点开查看当日卡片</em>
+      </button>`;
+  }).join("");
+
+  el("cardGrid").querySelectorAll("[data-card-day]").forEach((button) => {
+    button.addEventListener("click", () => openCardDay(button.dataset.cardDay));
   });
 }
 
@@ -695,7 +733,7 @@ function renderReview() {
           <span class="reason-bar"><i style="width:${(count / maxReason) * 100}%"></i></span>
           <strong>${count}</strong>
         </div>`).join("")
-    : `<div class="empty-state">本周还没有回避记录。这里可以帮助你识别反复出现的回避想法。</div>`;
+    : `<div class="empty-state">这里可以帮助你识别反复出现的回避想法。</div>`;
 
   const topReasonKey = sortedReasons[0]?.[0];
   el("ifThenPlan").innerHTML = topReasonKey
@@ -1226,7 +1264,6 @@ function closeDialog(dialog) {
 function openSettings() {
   el("ladderLevelInput").value = state.settings.ladderLevel;
   el("rewardLabelInput").value = state.settings.rewardLabel;
-  el("rewardAmountInput").value = state.settings.rewardAmount;
   el("settingsDialog").showModal();
 }
 
@@ -1236,7 +1273,7 @@ function initSettings() {
     event.preventDefault();
     state.settings.ladderLevel = Number(el("ladderLevelInput").value);
     state.settings.rewardLabel = el("rewardLabelInput").value.trim() || defaultState.settings.rewardLabel;
-    state.settings.rewardAmount = Math.max(0, Number(el("rewardAmountInput").value) || 0);
+    state.settings.rewardAmount = 0;
     saveState();
     renderAll();
     closeDialog(el("settingsDialog"));
@@ -1251,22 +1288,13 @@ function claimReward() {
     id: uid("reward"),
     week: weekKey(),
     label: state.settings.rewardLabel,
-    amount: Number(state.settings.rewardAmount),
+    amount: 0,
     createdAt: now
   });
-  if (Number(state.settings.rewardAmount) > 0) {
-    state.expenses.push({
-      id: uid("expense"),
-      createdAt: now,
-      amount: Number(state.settings.rewardAmount),
-      category: "奖赏兑现",
-      note: state.settings.rewardLabel
-    });
-  }
   saveState();
   renderAll();
   vibrate([25, 30, 45]);
-  showToast("已兑现真实奖赏 · 不是虚构省钱");
+  showToast("真实奖赏已兑现");
 }
 
 function exportData() {
@@ -1303,6 +1331,7 @@ function initEvents() {
   el("closeTrainingButton").addEventListener("click", () => closeDialog(el("trainingDialog")));
   el("closeSettingsButton").addEventListener("click", () => closeDialog(el("settingsDialog")));
   el("closeInstallButton").addEventListener("click", () => closeDialog(el("installDialog")));
+  el("closeCardDayButton").addEventListener("click", () => closeDialog(el("cardDayDialog")));
   el("installButton").addEventListener("click", installApp);
   el("claimRewardButton").addEventListener("click", claimReward);
   el("exportButton").addEventListener("click", exportData);
@@ -1323,7 +1352,7 @@ function initEvents() {
     showToast("真实开销已记录");
   });
 
-  [el("trainingDialog"), el("settingsDialog"), el("installDialog")].forEach((dialog) => {
+  [el("trainingDialog"), el("settingsDialog"), el("installDialog"), el("cardDayDialog")].forEach((dialog) => {
     dialog.addEventListener("click", (event) => {
       const box = dialog.getBoundingClientRect();
       const outside = event.clientX < box.left || event.clientX > box.right || event.clientY < box.top || event.clientY > box.bottom;
