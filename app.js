@@ -845,9 +845,7 @@ function renderExpenses() {
   el("fundWeekBalanceCard").classList.toggle("negative", lifetimeBalance < 0);
   el("fundBalanceTotal").classList.toggle("positive", lifetimeBalance > 0);
   el("fundBalanceTotal").classList.toggle("negative", lifetimeBalance < 0);
-  el("ledgerActionSummary").textContent = lifetimeActions
-    ? `${lifetimeActions} 次真实出手，已经留下 ${formatMoney(lifetimeFund)} 行动积累。`
-    : "还没有行动入账。第一笔会从真实出手开始。";
+  el("ledgerActionSummary").textContent = `${lifetimeActions} 次真实出手 · 当前累计净额`;
   el("expenseList").innerHTML = expenses.length
     ? [...expenses].reverse().map((item) => `
         <article class="expense-item">

@@ -10,7 +10,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="icon" href="./icons/icon.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="./styles.css?v=29" />
+    <link rel="stylesheet" href="./styles.css?v=30" />
     <title>向前一步</title>
   </head>
   <body>
@@ -196,9 +196,8 @@
 
         <section class="view" id="ledgerView" data-title="勇气账本">
           <section class="ledger-hero" aria-labelledby="ledgerHeading">
-            <span>当前累计净额</span>
+            <span id="ledgerActionSummary">0 次真实出手 · 当前累计净额</span>
             <h2 id="ledgerHeading"><strong id="fundBalanceTotal">¥0.00</strong></h2>
-            <p id="ledgerActionSummary">还没有行动入账。第一笔会从真实出手开始。</p>
           </section>
 
           <section class="section-block" aria-labelledby="expenseFormHeading">
@@ -387,6 +386,6 @@
     </dialog>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
-    <script src="./app.js?v=29" defer></script>
+    <script src="./app.js?v=30" defer></script>
   </body>
 </html>

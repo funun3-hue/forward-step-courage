@@ -1,4 +1,4 @@
-const CACHE_NAME = "forward-step-v29";
+const CACHE_NAME = "forward-step-v30";
 const APP_SHELL = [
   "./",
   "./index.html",
