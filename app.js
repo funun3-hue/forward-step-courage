@@ -121,7 +121,7 @@ const GROUP_COMPOSITIONS = {
 const BOUNDARY_CHECKS = [
   "对方没有明显赶路、通话、戴耳机或处理工作。",
   "保持距离，对方慌乱拒绝后不过分纠缠。",
-  "女生神情抗拒地回避或拒绝时，微笑着说谢谢并且离场。"
+  "女生回避或拒绝时，微笑着说“谢谢”/“不好意思”并离场。"
 ];
 
 const CONTEXTS = [
@@ -132,7 +132,7 @@ const CONTEXTS = [
   "校园",
   "园区",
   "活动现场",
-  "交通场所",
+  "公交站",
   "地铁",
   "小区",
   "美术馆",
@@ -177,6 +177,7 @@ function loadState() {
     const savedVersion = Number(saved.version || 1);
     const normalizeContext = (context) => {
       if (context === "小区公共区域") return "小区";
+      if (context === "交通场所") return "公交站";
       if (savedVersion < 6 && context === "其他") return "地铁";
       return context;
     };
@@ -903,12 +904,10 @@ function renderTrainingDialog() {
       <div class="dialog-step safety-timing-stage">
         <div class="safety-timer-ring" aria-hidden="true"></div>
         <div class="safety-step-content">
+          <h2>能识别边界，本身就是社交能力。</h2>
           <div class="safety-progress-row">
-            <p class="eyebrow">逐条边界检查</p>
             <strong>${safetyIndex + 1} / ${BOUNDARY_CHECKS.length}</strong>
           </div>
-          <h2>先确认这是一个合适机会</h2>
-          <p class="dialog-lead">一次只判断一件事。能识别边界，本身就是社交能力。</p>
           <div class="single-safety-check" aria-live="polite">
             <span>边界 ${safetyIndex + 1}</span>
             <p class="safety-check-copy">${escapeHtml(BOUNDARY_CHECKS[safetyIndex])}</p>
@@ -947,19 +946,15 @@ function renderTrainingDialog() {
         <div class="fund-action-cue">
           <span>完成后再记录心动程度与同行人数</span>
           <strong>¥0.05–¥10.50</strong>
-          <p>现在只做最小动作，不在出手前计算档位。</p>
         </div>
-        <div class="launch-plan"><span>如果环境合适，而且我开始反复预测拒绝</span><strong>那么我先迈出一步，再允许焦虑跟上来。</strong></div>
-        <p class="dialog-lead">不用寻找完美开场。说话真实、保持距离、给对方轻松退出的空间。</p>
+        <div class="launch-plan"><span>不用寻找完美开场。</span><strong>说话真实、保持距离、给对方轻松退出的空间。</strong></div>
         <button class="primary-action" id="returnedButton" type="button">行动完成了，回来记录</button>
-        <button class="secondary-action" id="changedUnsuitableButton" type="button">现场变得不合适</button>
-        <button class="text-button" id="actionAvoidedButton" type="button">我还是回避了</button>
+        <button class="secondary-action" id="actionAvoidedButton" type="button">我还是回避了</button>
       </div>`;
     el("returnedButton").addEventListener("click", () => {
       trainingFlow.stage = "outcome";
       renderTrainingDialog();
     });
-    el("changedUnsuitableButton").addEventListener("click", () => saveSimpleLog("unsuitable"));
     el("actionAvoidedButton").addEventListener("click", () => {
       trainingFlow.outcome = "avoided";
       trainingFlow.stage = "avoidance-detail";
@@ -971,11 +966,10 @@ function renderTrainingDialog() {
   if (trainingFlow.stage === "outcome") {
     content.innerHTML = `
       <div class="dialog-step">
-        <p class="eyebrow">不评判结果</p>
         <h2>刚才发生了什么？</h2>
         <div class="outcome-grid">
-          <button class="outcome-button" type="button" data-outcome="completed"><strong>对方愿意继续交流</strong><span>这仍是一笔真实出手记录</span></button>
-          <button class="outcome-button" type="button" data-outcome="graceful_exit"><strong>被拒绝了，我自然离开</strong><span>增加今日拒绝计数，完成暴露训练</span></button>
+          <button class="outcome-button" type="button" data-outcome="completed"><strong>对方愿意继续交流</strong><span>愉快地交流</span></button>
+          <button class="outcome-button" type="button" data-outcome="graceful_exit"><strong>被拒绝了，我自然离开</strong><span>增加今日暴露训练计数数量</span></button>
         </div>
       </div>`;
     content.querySelectorAll("[data-outcome]").forEach((button) => {
@@ -1024,9 +1018,8 @@ function renderTrainingDialog() {
               ${Object.entries(GROUP_COMPOSITIONS).map(([key, label]) => `<option value="${key}"${trainingFlow.groupComposition === key ? " selected" : ""}>${escapeHtml(label)}</option>`).join("")}
             </select>
           </label>
-          <p>只记录你的主观挑战感和同行人数，不记录她的外貌细节；回应如何都不改变金额。</p>
         </div>
-        <label><span>本次搭讪场景（写入勇气卡和周复盘）</span><select id="trainingContext">${contextOptions(trainingFlow.context)}</select></label>
+        <label><span>本次搭讪场景</span><select id="trainingContext">${contextOptions(trainingFlow.context)}</select></label>
         <div class="slider-row">
           <div class="slider-label"><span>行动前预计焦虑</span><strong id="beforeValue">${trainingFlow.anxietyBefore} / 10</strong></div>
           <input id="beforeRange" type="range" min="0" max="10" value="${trainingFlow.anxietyBefore}" />
@@ -1035,7 +1028,7 @@ function renderTrainingDialog() {
           <div class="slider-label"><span>行动后现在的焦虑</span><strong id="afterValue">${trainingFlow.anxietyAfter} / 10</strong></div>
           <input id="afterRange" type="range" min="0" max="10" value="${trainingFlow.anxietyAfter}" />
         </div>
-        <label><span>一句经验（可选）</span><textarea id="trainingNote" maxlength="100" placeholder="只写自己的经验，不写她的照片或可识别特征。"></textarea></label>
+        <label><span>一句经验（可选）</span><textarea id="trainingNote" maxlength="100" placeholder="精炼总结，能够加速成长进步！"></textarea></label>
         <button class="primary-action" type="submit">收下这张勇气卡</button>
       </form>`;
     bindRange("beforeRange", "beforeValue");
@@ -1095,26 +1088,21 @@ function renderTrainingDialog() {
           <strong>${escapeHtml(card.quote)}</strong>
           <p>${escapeHtml(card.evidence)}</p>
         </div>
-        <p class="launch-latency-fact">从发现机会到开始行动：<strong>${formatLaunchLatency(card.launchLatencyMs)}</strong><span>只记录事实，不评价快慢。</span></p>
+        <p class="launch-latency-fact">从发现机会到开始行动：<strong>${formatLaunchLatency(card.launchLatencyMs)}</strong></p>
         <div class="reward-momentum-stats">
           <div><span>本周真实出手</span><strong>${weekActions} 次</strong></div>
           <div><span>本周勇气储备</span><strong>${formatMoney(weekFund)}</strong></div>
           <div><span>当前本周净额</span><strong>${formatMoney(weekBalance, true)}</strong></div>
         </div>
         <p class="reward-progress-copy">今日已真实出手 ${todayActions} 次${todayActions >= COMPLETE_ACTION_GOAL ? " · 蓝色进阶已点亮" : " · 绿色行动底已点亮"}${todayRejections ? `；其中 ${todayRejections} 次拒绝已记为暗金描边` : ""}</p>
-        <button class="primary-action" id="rewardLedgerButton" type="button">查看刚刚入账</button>
+        <button class="primary-action" id="rewardLedgerButton" type="button">完成本次记录</button>
         <button class="secondary-action" id="viewCardButton" type="button">去卡册翻开它</button>
-        <button class="text-button" id="finishTrainingButton" type="button">完成本次记录</button>
       </div>`;
-    el("rewardLedgerButton").addEventListener("click", () => {
-      closeDialog(el("trainingDialog"));
-      switchView("ledgerView", "勇气账本");
-    });
+    el("rewardLedgerButton").addEventListener("click", () => closeDialog(el("trainingDialog")));
     el("viewCardButton").addEventListener("click", () => {
       closeDialog(el("trainingDialog"));
       switchView("cardsView", "勇气卡册");
     });
-    el("finishTrainingButton").addEventListener("click", () => closeDialog(el("trainingDialog")));
   }
 }
 

@@ -2012,16 +2012,16 @@ textarea::placeholder {
 }
 
 .safety-progress-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px;
+  display: block;
+  min-height: 1em;
 }
 
 .safety-progress-row strong {
+  display: block;
   color: var(--mint);
   font-size: 0.74rem;
   letter-spacing: 0.08em;
+  text-align: right;
 }
 
 .safety-timer-ring {
@@ -2163,13 +2163,6 @@ textarea::placeholder {
   margin-top: 10px;
 }
 
-.fund-config > p {
-  margin: 10px 0 0;
-  color: var(--muted);
-  font-size: 0.63rem;
-  line-height: 1.5;
-}
-
 .fund-action-cue {
   display: grid;
   gap: 6px;
@@ -2179,8 +2172,7 @@ textarea::placeholder {
   background: rgba(255, 213, 142, 0.05);
 }
 
-.fund-action-cue span,
-.fund-action-cue p {
+.fund-action-cue span {
   color: var(--muted);
   font-size: 0.66rem;
 }
@@ -2188,11 +2180,6 @@ textarea::placeholder {
 .fund-action-cue strong {
   color: var(--gold);
   font-size: 1.08rem;
-}
-
-.fund-action-cue p {
-  margin: 0;
-  line-height: 1.5;
 }
 
 .launch-plan {
@@ -2342,7 +2329,7 @@ textarea::placeholder {
 
 .reward-momentum-stats span {
   color: var(--muted);
-  font-size: 0.55rem;
+  font-size: 0.68rem;
   line-height: 1.35;
 }
 
