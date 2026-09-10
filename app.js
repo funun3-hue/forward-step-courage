@@ -148,7 +148,7 @@ const COMPLETE_ACTION_GOAL = 5;
 const WEEKLY_ACTION_DAYS = 7;
 
 const defaultState = {
-  version: 7,
+  version: 8,
   points: 0,
   settings: {
     ladderLevel: 3,
@@ -198,7 +198,21 @@ function loadState() {
       deferrals: Array.isArray(saved.deferrals) ? saved.deferrals : [],
       rewardClaims: Array.isArray(saved.rewardClaims) ? saved.rewardClaims : []
     };
-    migrated.version = 7;
+    if (migrated.version < 8) {
+      const today = dateKey();
+      const todayActions = migrated.logs.filter((log) => (log.kind === "completed" || log.kind === "graceful_exit") && dateKey(new Date(log.createdAt)) === today);
+      todayActions.forEach((log) => {
+        if (Number(log.fundAmount || 0) > 0) return;
+        const amount = courageFundAmount(log.fundLevel || "everyday", log.fundGroup || "solo");
+        if (!Number.isFinite(amount) || amount <= 0) return;
+        log.fundAmount = amount;
+        if (log.cardId) {
+          const card = migrated.cards.find((item) => item.id === log.cardId);
+          if (card) card.fundAmount = amount;
+        }
+      });
+    }
+    migrated.version = 8;
     return migrated;
   } catch (error) {
     console.warn("无法读取本地数据，已使用默认设置。", error);
@@ -279,9 +293,7 @@ function courageFundAmount(level = "everyday", group = "solo") {
 }
 
 function availableCourageFundAmount(level = "everyday", group = "solo") {
-  const today = dateKey();
-  const todayActions = actionLogs().filter((log) => dateKey(new Date(log.createdAt)) === today).length;
-  return todayActions >= COMPLETE_ACTION_GOAL ? 0 : courageFundAmount(level, group);
+  return courageFundAmount(level, group);
 }
 
 function courageFundTotal(logs = state.logs) {
@@ -983,7 +995,6 @@ function renderTrainingDialog() {
 
   if (trainingFlow.stage === "action-detail") {
     const fundAmount = availableCourageFundAmount(trainingFlow.fundLevel, trainingFlow.fundGroup);
-    const fundCapReached = fundAmount === 0 && actionLogs().filter((log) => dateKey(new Date(log.createdAt)) === dateKey()).length >= COMPLETE_ACTION_GOAL;
     content.innerHTML = `
       <form class="dialog-step" id="actionDetailForm">
         <p class="eyebrow">生成一张新勇气卡</p>
@@ -991,7 +1002,7 @@ function renderTrainingDialog() {
         <div class="fund-config">
           <div class="fund-config-heading">
             <span>事后记录本次挑战档位</span>
-            <strong id="fundPreview" aria-live="polite">${fundCapReached ? "今日已满，不再累计" : `+${formatMoney(fundAmount)}`}</strong>
+            <strong id="fundPreview" aria-live="polite">${`+${formatMoney(fundAmount)}`}</strong>
           </div>
           <div class="fund-config-grid">
             <label>
@@ -1117,8 +1128,7 @@ function updateFundPreview() {
   compositionField?.classList.toggle("hidden", trainingFlow.fundGroup === "solo");
   if (trainingFlow.fundGroup === "solo") trainingFlow.groupComposition = "unspecified";
   const amount = availableCourageFundAmount(trainingFlow.fundLevel, trainingFlow.fundGroup);
-  const fundCapReached = amount === 0 && actionLogs().filter((log) => dateKey(new Date(log.createdAt)) === dateKey()).length >= COMPLETE_ACTION_GOAL;
-  el("fundPreview").textContent = fundCapReached ? "今日已满，不再累计" : `+${formatMoney(amount)}`;
+  el("fundPreview").textContent = `+${formatMoney(amount)}`;
 }
 
 function saveSimpleLog(kind) {
