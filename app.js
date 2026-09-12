@@ -112,6 +112,11 @@ const COURAGE_FUND_GROUPS = {
   group: "三人组或以上"
 };
 
+const GROUP_COMPOSITIONS = {
+  women_only: "均为女性",
+  includes_man: "包含男性"
+};
+
 const BOUNDARY_CHECKS = [
   "对方没有明显赶路、通话、戴耳机或处理工作。",
   "保持距离，对方慌乱拒绝后不过分纠缠。",
@@ -1015,6 +1020,12 @@ function renderTrainingDialog() {
               </select>
             </label>
           </div>
+          <label class="group-composition-field${trainingFlow.fundGroup === "solo" ? " hidden" : ""}" id="groupCompositionField">
+            <span>同行构成</span>
+            <select id="groupCompositionSelect">
+              ${Object.entries(GROUP_COMPOSITIONS).map(([key, label]) => `<option value="${key}"${(trainingFlow.groupComposition === "includes_man" ? "includes_man" : "women_only") === key ? " selected" : ""}>${escapeHtml(label)}</option>`).join("")}
+            </select>
+          </label>
         </div>
         <label><span>本次搭讪场景</span><select id="trainingContext">${contextOptions(trainingFlow.context)}</select></label>
         <div class="slider-row">
@@ -1032,6 +1043,9 @@ function renderTrainingDialog() {
     bindRange("afterRange", "afterValue");
     el("fundLevelSelect").addEventListener("change", updateFundPreview);
     el("fundGroupSelect").addEventListener("change", updateFundPreview);
+    el("groupCompositionSelect").addEventListener("change", () => {
+      trainingFlow.groupComposition = el("groupCompositionSelect").value;
+    });
     el("actionDetailForm").addEventListener("submit", saveActionLog);
     return;
   }
@@ -1109,7 +1123,14 @@ function bindRange(rangeId, valueId) {
 function updateFundPreview() {
   trainingFlow.fundLevel = el("fundLevelSelect").value;
   trainingFlow.fundGroup = el("fundGroupSelect").value;
-  trainingFlow.groupComposition = trainingFlow.fundGroup === "solo" ? "unspecified" : "women_only";
+  const compositionField = el("groupCompositionField");
+  compositionField?.classList.toggle("hidden", trainingFlow.fundGroup === "solo");
+  if (trainingFlow.fundGroup === "solo") {
+    trainingFlow.groupComposition = "unspecified";
+  } else if (trainingFlow.groupComposition !== "includes_man") {
+    trainingFlow.groupComposition = "women_only";
+    el("groupCompositionSelect").value = "women_only";
+  }
   const amount = availableCourageFundAmount(trainingFlow.fundLevel, trainingFlow.fundGroup);
   el("fundPreview").textContent = `+${formatMoney(amount)}`;
 }
@@ -1185,7 +1206,7 @@ function saveActionLog(event) {
   event.preventDefault();
   trainingFlow.fundLevel = el("fundLevelSelect").value;
   trainingFlow.fundGroup = el("fundGroupSelect").value;
-  trainingFlow.groupComposition = trainingFlow.fundGroup === "solo" ? "unspecified" : "women_only";
+  trainingFlow.groupComposition = trainingFlow.fundGroup === "solo" ? "unspecified" : el("groupCompositionSelect").value;
   const before = Number(el("beforeRange").value);
   const after = Number(el("afterRange").value);
   const context = el("trainingContext").value;
