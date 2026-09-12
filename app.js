@@ -107,15 +107,9 @@ const COURAGE_FUND_LEVELS = {
 };
 
 const COURAGE_FUND_GROUPS = {
-  solo: "独自一人",
-  companion: "与 1 人同行",
-  group: "与 2 人及以上同行"
-};
-
-const GROUP_COMPOSITIONS = {
-  unspecified: "未记录同行构成",
-  women_only: "同行者均为女性",
-  includes_man: "同行者中有男性"
+  solo: "单人组",
+  companion: "双人组",
+  group: "三人组或以上"
 };
 
 const BOUNDARY_CHECKS = [
@@ -428,7 +422,7 @@ function renderToday() {
 
   el("levelName").textContent = currentTitle().name;
   el("totalPoints").textContent = state.points;
-  el("heroFundTotal").textContent = formatMoney(courageFundTotal());
+  el("heroFundTotal").textContent = formatMoney(courageFundTotal(todayLogs));
   el("homeWeekActions").textContent = weekActions.length;
   el("homeWeekFund").textContent = formatMoney(weekFund);
   el("homeWeekBalance").textContent = formatMoney(weekBalance, true);
@@ -530,7 +524,7 @@ function renderMap() {
     { icon: "¥", name: "第一枚勇气币", detail: "第一次把真实行动变成勇气预算", progress: courageFundTotal() > 0 ? 1 : 0, target: 1 },
     { icon: "十", name: "稳定出手", detail: "累计完成 10 次尊重边界的接近", progress: allActions.length, target: 10 },
     { icon: "▣", name: "证据收藏家", detail: "收藏 20 张勇气卡", progress: state.cards.length, target: 20 },
-    { icon: "Ⅱ", name: "双人组·初次", detail: "第一次向有 1 位同行者的目标开口", progress: pairedActions.length, target: 1 },
+    { icon: "Ⅱ", name: "双人组·初次", detail: "第一次向双人组目标开口", progress: pairedActions.length, target: 1 },
     { icon: "Ⅱ", name: "双人组·三次", detail: "完成 3 次双人组主动交流", progress: pairedActions.length, target: 3 },
     { icon: "Ⅱ", name: "双人组·五次", detail: "完成 5 次双人组主动交流", progress: pairedActions.length, target: 5 },
     { icon: "♂", name: "男凝目光·初次", detail: "第一次向含男性同行者的组合开口", progress: includesManActions.length, target: 1 },
@@ -1015,18 +1009,12 @@ function renderTrainingDialog() {
             <label>
               <span>对方当时</span>
               <select id="fundGroupSelect">
-                <option value="solo"${trainingFlow.fundGroup === "solo" ? " selected" : ""}>独自一人</option>
-                <option value="companion"${trainingFlow.fundGroup === "companion" ? " selected" : ""}>与 1 人同行</option>
-                <option value="group"${trainingFlow.fundGroup === "group" ? " selected" : ""}>与 2 人及以上同行</option>
+                <option value="solo"${trainingFlow.fundGroup === "solo" ? " selected" : ""}>单人组</option>
+                <option value="companion"${trainingFlow.fundGroup === "companion" ? " selected" : ""}>双人组</option>
+                <option value="group"${trainingFlow.fundGroup === "group" ? " selected" : ""}>三人组或以上</option>
               </select>
             </label>
           </div>
-          <label class="group-composition-field${trainingFlow.fundGroup === "solo" ? " hidden" : ""}" id="groupCompositionField">
-            <span>同行构成（只用于组合成就）</span>
-            <select id="groupCompositionSelect">
-              ${Object.entries(GROUP_COMPOSITIONS).map(([key, label]) => `<option value="${key}"${trainingFlow.groupComposition === key ? " selected" : ""}>${escapeHtml(label)}</option>`).join("")}
-            </select>
-          </label>
         </div>
         <label><span>本次搭讪场景</span><select id="trainingContext">${contextOptions(trainingFlow.context)}</select></label>
         <div class="slider-row">
@@ -1044,9 +1032,6 @@ function renderTrainingDialog() {
     bindRange("afterRange", "afterValue");
     el("fundLevelSelect").addEventListener("change", updateFundPreview);
     el("fundGroupSelect").addEventListener("change", updateFundPreview);
-    el("groupCompositionSelect").addEventListener("change", () => {
-      trainingFlow.groupComposition = el("groupCompositionSelect").value;
-    });
     el("actionDetailForm").addEventListener("submit", saveActionLog);
     return;
   }
@@ -1124,9 +1109,7 @@ function bindRange(rangeId, valueId) {
 function updateFundPreview() {
   trainingFlow.fundLevel = el("fundLevelSelect").value;
   trainingFlow.fundGroup = el("fundGroupSelect").value;
-  const compositionField = el("groupCompositionField");
-  compositionField?.classList.toggle("hidden", trainingFlow.fundGroup === "solo");
-  if (trainingFlow.fundGroup === "solo") trainingFlow.groupComposition = "unspecified";
+  trainingFlow.groupComposition = trainingFlow.fundGroup === "solo" ? "unspecified" : "women_only";
   const amount = availableCourageFundAmount(trainingFlow.fundLevel, trainingFlow.fundGroup);
   el("fundPreview").textContent = `+${formatMoney(amount)}`;
 }
@@ -1202,7 +1185,7 @@ function saveActionLog(event) {
   event.preventDefault();
   trainingFlow.fundLevel = el("fundLevelSelect").value;
   trainingFlow.fundGroup = el("fundGroupSelect").value;
-  trainingFlow.groupComposition = trainingFlow.fundGroup === "solo" ? "unspecified" : el("groupCompositionSelect").value;
+  trainingFlow.groupComposition = trainingFlow.fundGroup === "solo" ? "unspecified" : "women_only";
   const before = Number(el("beforeRange").value);
   const after = Number(el("afterRange").value);
   const context = el("trainingContext").value;
