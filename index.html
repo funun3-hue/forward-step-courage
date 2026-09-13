@@ -10,7 +10,8 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="icon" href="./icons/icon.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="./styles.css?v=35" />
+    <link rel="apple-touch-icon" href="./icons/icon-192.png" sizes="192x192" />
+    <link rel="stylesheet" href="./styles.css?v=36" />
     <title>向前一步</title>
   </head>
   <body>
@@ -369,14 +370,14 @@
     <dialog class="sheet compact-sheet" id="installDialog">
       <div class="sheet-handle" aria-hidden="true"></div>
       <button class="sheet-close" id="closeInstallButton" type="button" aria-label="关闭">×</button>
-      <p class="eyebrow">安装到华为手机</p>
-      <h2>像 App 一样放到桌面</h2>
-      <ol class="install-steps">
-        <li>用华为浏览器打开部署后的 HTTPS 地址。</li>
-        <li>点击右下角“∷”，选择“添加至”→“桌面”；HarmonyOS 5 可直接选择“添加至桌面”。</li>
-        <li>以后从桌面图标打开；训练与卡片数据保存在当前浏览器本机。</li>
+      <p class="eyebrow" id="installGuideEyebrow">安装到手机</p>
+      <h2 id="installGuideTitle">像 App 一样放到桌面</h2>
+      <ol class="install-steps" id="installGuideSteps">
+        <li>打开浏览器菜单。</li>
+        <li>选择“安装应用”或“添加到主屏幕”。</li>
+        <li>确认后从桌面图标打开。</li>
       </ol>
-      <p class="form-hint">桌面图标若带蓝色小闪电，表示华为浏览器正以 PWA/快应用方式创建快捷入口，属于正常现象。</p>
+      <p class="form-hint" id="installGuideHint">训练与卡片数据会保存在当前浏览器本机。</p>
     </dialog>
 
     <dialog class="sheet card-day-sheet" id="cardDayDialog">
@@ -386,6 +387,6 @@
     </dialog>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
-    <script src="./app.js?v=35" defer></script>
+    <script src="./app.js?v=36" defer></script>
   </body>
 </html>

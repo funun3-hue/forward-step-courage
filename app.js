@@ -1382,14 +1382,53 @@ function exportData() {
   showToast("本地数据已导出");
 }
 
+function renderInstallGuide() {
+  const userAgent = navigator.userAgent;
+  const isWeChat = /MicroMessenger/i.test(userAgent);
+  const isIOS = /iPhone|iPad|iPod/i.test(userAgent);
+  const isEdge = /EdgA|EdgiOS|Edg\//i.test(userAgent);
+  const isHuawei = /HUAWEI|HONOR|HarmonyOS/i.test(userAgent);
+  let eyebrow = "安装到手机";
+  let title = "像 App 一样放到桌面";
+  let steps = ["打开浏览器菜单。", "选择“安装应用”或“添加到主屏幕”。", "确认后从桌面图标打开。"];
+  let hint = "训练与卡片数据会保存在当前浏览器本机。";
+
+  if (isWeChat) {
+    eyebrow = "请先换到系统浏览器";
+    steps = ["点击右上角菜单。", "选择“在浏览器打开”，推荐 Edge 或华为浏览器。", "回到网页后再次点击安装按钮。"];
+    hint = "微信内置浏览器不能直接安装此应用。";
+  } else if (isIOS) {
+    eyebrow = "安装到 iPhone 或 iPad";
+    steps = ["点击浏览器的分享按钮。", "向下找到并选择“添加到主屏幕”。", "点击右上角“添加”。"];
+  } else if (isEdge) {
+    eyebrow = "在 Edge 中安装";
+    steps = ["点击 Edge 底部或右下角的“…”菜单。", "选择“添加到手机”或“安装应用”。", "确认安装，并允许在桌面创建图标。"];
+    hint = "如果菜单里暂时没有安装项，请刷新页面后再试一次。";
+  } else if (isHuawei) {
+    eyebrow = "安装到华为手机";
+    steps = ["点击浏览器右下角菜单。", "选择“添加至”→“桌面”或“添加至桌面”。", "确认后从桌面图标打开。"];
+    hint = "桌面图标带浏览器角标属于正常现象。";
+  }
+
+  el("installGuideEyebrow").textContent = eyebrow;
+  el("installGuideTitle").textContent = title;
+  el("installGuideSteps").innerHTML = steps.map((step) => `<li>${escapeHtml(step)}</li>`).join("");
+  el("installGuideHint").textContent = hint;
+}
+
 async function installApp() {
   if (installPrompt) {
-    installPrompt.prompt();
-    await installPrompt.userChoice;
+    await installPrompt.prompt();
+    const choice = await installPrompt.userChoice;
     installPrompt = null;
-    el("installButton").classList.add("hidden");
+    if (choice.outcome === "accepted") {
+      el("installButton").classList.add("hidden");
+    } else {
+      showToast("已取消安装，可随时再次尝试");
+    }
     return;
   }
+  renderInstallGuide();
   el("installDialog").showModal();
 }
 
@@ -1448,6 +1487,7 @@ function initInstall() {
   });
   window.addEventListener("appinstalled", () => {
     el("installButton").classList.add("hidden");
+    closeDialog(el("installDialog"));
     showToast("已安装到桌面");
   });
 }
