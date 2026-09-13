@@ -2034,6 +2034,23 @@ textarea::placeholder {
   will-change: transform;
 }
 
+.safety-timer-value {
+  position: absolute;
+  z-index: 0;
+  top: 48%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: rgba(176, 220, 242, 0.22);
+  font-size: clamp(3rem, 13vw, 5.4rem);
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  white-space: nowrap;
+  pointer-events: none;
+  user-select: none;
+}
+
 @keyframes safety-timer-spin {
   from { transform: translate(-50%, -50%) rotate(0deg); }
   to { transform: translate(-50%, -50%) rotate(360deg); }

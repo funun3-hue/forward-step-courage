@@ -165,6 +165,7 @@ let state = loadState();
 let installPrompt = null;
 let toastTimer = null;
 let trainingFlow = null;
+let opportunityTimerId = null;
 let selectedWeekKey = weekKey();
 
 const el = (id) => document.getElementById(id);
@@ -879,6 +880,37 @@ function contextOptions(selected = "商场") {
   return CONTEXTS.map((context) => `<option${context === selected ? " selected" : ""}>${escapeHtml(context)}</option>`).join("");
 }
 
+function formatRunningTime(elapsedMs) {
+  const totalSeconds = Math.max(0, Math.floor(elapsedMs / 1000));
+  const seconds = totalSeconds % 60;
+  const totalMinutes = Math.floor(totalSeconds / 60);
+  if (totalMinutes < 1) return `${seconds}秒`;
+  const minutes = totalMinutes % 60;
+  const hours = Math.floor(totalMinutes / 60);
+  if (hours < 1) return `${minutes}分 ${String(seconds).padStart(2, "0")}秒`;
+  return `${hours}时 ${String(minutes).padStart(2, "0")}分 ${String(seconds).padStart(2, "0")}秒`;
+}
+
+function stopOpportunityTimer() {
+  if (opportunityTimerId !== null) window.clearInterval(opportunityTimerId);
+  opportunityTimerId = null;
+}
+
+function startOpportunityTimer() {
+  stopOpportunityTimer();
+  const timer = el("safetyElapsedTime");
+  if (!timer || !trainingFlow) return;
+  const update = () => {
+    const wallElapsed = Date.now() - trainingFlow.opportunityStartedAt;
+    const performanceElapsed = performance.now() - trainingFlow.opportunityStartedPerf;
+    const label = formatRunningTime(Math.max(wallElapsed, performanceElapsed));
+    timer.textContent = label;
+    timer.setAttribute("aria-label", `已计时 ${label}`);
+  };
+  update();
+  opportunityTimerId = window.setInterval(update, 250);
+}
+
 function openTrainingDialog() {
   trainingFlow = {
     stage: "safety",
@@ -905,6 +937,7 @@ function openTrainingDialog() {
 function renderTrainingDialog() {
   const content = el("trainingDialogContent");
   if (!trainingFlow) return;
+  stopOpportunityTimer();
 
   if (trainingFlow.stage === "safety") {
     const safetyIndex = Math.min(BOUNDARY_CHECKS.length - 1, Number(trainingFlow.safetyIndex || 0));
@@ -912,6 +945,7 @@ function renderTrainingDialog() {
     content.innerHTML = `
       <div class="dialog-step safety-timing-stage">
         <div class="safety-timer-ring" aria-hidden="true"></div>
+        <div class="safety-timer-value" id="safetyElapsedTime" role="timer" aria-live="off">0秒</div>
         <div class="safety-step-content">
           <h2>能识别边界，本身就是社交能力。</h2>
           <div class="safety-progress-row">
@@ -927,6 +961,8 @@ function renderTrainingDialog() {
           </div>
         </div>
       </div>`;
+
+    startOpportunityTimer();
 
     el("safetyConfirmButton").addEventListener("click", () => {
       if (!isLastCheck) {
@@ -1293,6 +1329,7 @@ function switchView(viewId, title) {
 }
 
 function closeDialog(dialog) {
+  if (dialog === el("trainingDialog")) stopOpportunityTimer();
   if (dialog.open) dialog.close();
 }
 
@@ -1398,6 +1435,7 @@ function initEvents() {
       if (outside) closeDialog(dialog);
     });
   });
+  el("trainingDialog").addEventListener("close", stopOpportunityTimer);
 }
 
 function initInstall() {
