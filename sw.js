@@ -1,13 +1,13 @@
-const CACHE_NAME = "forward-step-v36";
+const CACHE_NAME = "forward-step-v37";
 const APP_SHELL = [
   "./",
   "./index.html",
   "./styles.css",
   "./app.js",
-  "./manifest.webmanifest",
-  "./icons/icon-192.png",
-  "./icons/icon-512.png",
-  "./icons/icon-maskable-512.png",
+  "./manifest.webmanifest?v=37",
+  "./icons/icon-192.png?v=37",
+  "./icons/icon-512.png?v=37",
+  "./icons/icon-maskable-512.png?v=37",
   "./icons/icon.svg",
   "./icons/icon-maskable.svg"
 ];
